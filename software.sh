@@ -21,12 +21,11 @@
 #  
 #  
 
-cd $HOME
+root=`pwd`
 
 removeSoft=`cat remove-software.txt`
 installSoft=`cat install-software.txt`
 logFile="$HOME/Documents/log.out"
-root=`pwd`
 
 echo "Would you like a log file ?"
 read -p "[y/N]" keepLog
@@ -85,7 +84,6 @@ sudo mysql_secure_installation
 
 sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.save
 sudo cp nginx-conf-example /etc/nginx/sites-available/default
-
 
 if [ $keepLog = 'y' ] || [ $keepLog = 'Y' ]
 then
