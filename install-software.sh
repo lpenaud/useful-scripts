@@ -23,8 +23,8 @@
 
 cd $HOME
 
-removeSoft="firefox mousepad parole xfce4-taskmanager"
-installSoft="firefox owncloud-client redshift-gtk vim libreoffice pdfshuffler geany geany-plugins geogebra gimp inkscape xsane chromium-browser vlc gnome-disk-utility openjdk-8-jre gnome-system-monitor git gitKraken vscode"
+removeSoft=`cat remove-software.txt`
+installSoft=`cat install-software.txt`
 logFile="$HOME/Documents/log.out"
 
 echo "Would you like a log file ?"
@@ -48,15 +48,19 @@ sudo apt-get update >> $logFile
 echo "Upgrading all software..."
 sudo apt-get upgrade -y >> $logFile
 
+cd $HOME/Téléchargements
+
 for soft in $installSoft
 do
 	echo "Installing $soft..."
 		case $soft in
 			"gitKraken")
 				wget -O $HOME/Téléchargements/$soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb >> $logFile
+				sudo apt-get install ./$soft.deb -y >> $logFile
 				;;
 			"vscode")
 				wget -O $HOME/Téléchargements/$soft.deb https://go.microsoft.com/fwlink/?LinkID=760868 >> $logFile
+				sudo apt-get install ./$soft.deb -y >> $logFile
 				;;
 			*)
 				sudo apt-get install $soft -y >> $logFile
