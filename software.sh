@@ -37,26 +37,29 @@ read -p "v" nodejsVersion
 for soft in $removeSoft
 do
 	echo "Removing $soft..."
-	sudo apt-get remove $soft -y >> $logFile
+	sudo apt-get remove $soft -y &
 done
 
 echo "Executing autoremove..."
-sudo apt-get autoremove -y >> $logFile
+sudo apt-get autoremove -y &
 
 echo "Adding firefox-aurora repository..."
-sudo add-apt-repository ppa:ubuntu-mozilla-daily/firefox-aurora -y >> $logFile
+sudo add-apt-repository ppa:ubuntu-mozilla-daily/firefox-aurora -y &
 
 echo "Adding nginx stable repository..."
-add-apt-repository ppa:nginx/stable -y >> $logFile
+add-apt-repository ppa:nginx/stable -y &
+
+echo "Installing curl..."
+sudo apt-get install curl -y &
 
 echo "Adding Node.js v.$nodejsVersion.x repository..."
-curl -sL https://deb.nodesource.com/setup_$nodejsVersion.x >> $logFile | sudo -E bash - >> $logFile
+curl -sL https://deb.nodesource.com/setup_$nodejsVersion.x | sudo -E bash - &
 
 echo "Updating all repositories..."
-sudo apt-get update >> $logFile
+sudo apt-get update &
 
 echo "Upgrading all software..."
-sudo apt-get upgrade -y >> $logFile
+sudo apt-get upgrade -y &
 
 cd $HOME/Téléchargements
 
@@ -65,15 +68,15 @@ do
 	echo "Installing $soft..."
 		case $soft in
 			"gitKraken")
-				wget -O $HOME/Téléchargements/$soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb >> $logFile
-				sudo apt-get install ./$soft.deb -y >> $logFile
+				wget -O $HOME/Téléchargements/$soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb &
+				sudo apt-get install ./$soft.deb -y &
 				;;
 			"vscode")
-				wget -O $HOME/Téléchargements/$soft.deb https://go.microsoft.com/fwlink/?LinkID=760868 >> $logFile
-				sudo apt-get install ./$soft.deb -y >> $logFile
+				wget -O $HOME/Téléchargements/$soft.deb https://go.microsoft.com/fwlink/?LinkID=760868 &
+				sudo apt-get install ./$soft.deb -y &
 				;;
 			*)
-				sudo apt-get install $soft -y >> $logFile
+				sudo apt-get install $soft -y &
 				;;
 		esac
 done

@@ -1,4 +1,3 @@
-curl
 firefox
 owncloud-client
 redshift-gtk
