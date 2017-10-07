@@ -1,3 +1,4 @@
+curl
 firefox
 owncloud-client
 redshift-gtk
@@ -18,3 +19,15 @@ gnome-system-monitor
 git
 gitKraken
 vscode
+nodejs
+php
+php7.0-fpm
+php-mysql
+php-pgsql
+php-sqlite
+php-sybase
+php-pear
+php-cli
+mariadb-server
+mariadb-client
+nginx

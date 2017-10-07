@@ -26,9 +26,14 @@ cd $HOME
 removeSoft=`cat remove-software.txt`
 installSoft=`cat install-software.txt`
 logFile="$HOME/Documents/log.out"
+root=`pwd`
 
 echo "Would you like a log file ?"
 read -p "[y/N]" keepLog
+
+echo "Which nodejs version do you want to install ?"
+echo "Release calendar : https://github.com/nodejs/Release#release-schedule1"
+read -p "v" nodejsVersion
 
 for soft in $removeSoft
 do
@@ -41,6 +46,12 @@ sudo apt-get autoremove -y >> $logFile
 
 echo "Adding firefox-aurora repository..."
 sudo add-apt-repository ppa:ubuntu-mozilla-daily/firefox-aurora -y >> $logFile
+
+echo "Adding nginx stable repository..."
+add-apt-repository ppa:nginx/stable -y >> $logFile
+
+echo "Adding Node.js v.$nodejsVersion.x repository..."
+curl -sL https://deb.nodesource.com/setup_$nodejsVersion.x >> $logFile | sudo -E bash - >> $logFile
 
 echo "Updating all repositories..."
 sudo apt-get update >> $logFile
@@ -67,6 +78,13 @@ do
 				;;
 		esac
 done
+
+cd $root
+
+sudo mysql_secure_installation
+
+sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.save
+sudo cp nginx-conf-example /etc/nginx/sites-available/default
 
 
 if [ $keepLog = 'y' ] || [ $keepLog = 'Y' ]
