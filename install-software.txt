@@ -32,3 +32,4 @@ mariadb-client
 nginx
 discord
 soundconverter
+audacious
