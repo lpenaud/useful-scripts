@@ -68,11 +68,15 @@ do
 	echo "Installing $soft..."
 		case $soft in
 			"gitKraken")
-				wget -O $HOME/Téléchargements/$soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb &
+				wget -O $soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb &
 				sudo apt-get install ./$soft.deb -y &
 				;;
 			"vscode")
-				wget -O $HOME/Téléchargements/$soft.deb https://go.microsoft.com/fwlink/?LinkID=760868 &
+				wget -O $soft.deb https://go.microsoft.com/fwlink/?LinkID=760868 &
+				sudo apt-get install ./$soft.deb -y &
+				;;
+			"discord")
+				wget -O $soft.deb https://dl.discordapp.net/apps/linux/0.0.2/discord-0.0.2.deb &
 				sudo apt-get install ./$soft.deb -y &
 				;;
 			*)

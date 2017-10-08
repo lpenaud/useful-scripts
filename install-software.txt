@@ -30,3 +30,5 @@ php-cli
 mariadb-server
 mariadb-client
 nginx
+discord
+soundconverter
