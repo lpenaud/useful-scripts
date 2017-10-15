@@ -1,5 +1,5 @@
 firefox
-owncloud-client
+nextcloud-client
 redshift-gtk
 vim
 libreoffice
@@ -33,3 +33,4 @@ nginx
 discord
 soundconverter
 audacious
+python3-pip
