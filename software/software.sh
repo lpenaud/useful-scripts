@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#  install-software.sh
+#  software.sh
 #  
 #  Copyright 2017 Loïc Penaud <loic.penaud@lilo.fr>
 #  
