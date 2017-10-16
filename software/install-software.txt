@@ -34,3 +34,5 @@ discord
 soundconverter
 audacious
 python3-pip
+xbacklight
+screenfetch
