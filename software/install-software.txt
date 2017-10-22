@@ -36,3 +36,4 @@ audacious
 python3-pip
 xbacklight
 screenfetch
+glade
