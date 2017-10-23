@@ -53,7 +53,7 @@ eco "Adding firefox-aurora repository..."
 add-apt-repository ppa:ubuntu-mozilla-daily/firefox-aurora -y
 
 eco "Adding nextcloud repository..."
-add-apt-repository ppa:nextcloud-devs/client
+add-apt-repository ppa:nextcloud-devs/client -y
 
 eco "Adding nginx stable repository..."
 add-apt-repository ppa:nginx/stable -y
