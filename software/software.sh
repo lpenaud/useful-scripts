@@ -74,15 +74,15 @@ do
 	eco "Installing $soft..."
 		case $soft in
 			"gitKraken")
-				wget -O $soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb &
+				wget -O $soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb
 				apt-get install ./$soft.deb -y
 				;;
 			"vscode")
-				wget -O $soft.deb https://go.microsoft.com/fwlink/?LinkID=760868 &
+				wget -O $soft.deb https://go.microsoft.com/fwlink/?LinkID=760868
 				apt-get install ./$soft.deb -y
 				;;
 			"discord")
-				wget -O $soft.deb https://dl.discordapp.net/apps/linux/0.0.2/discord-0.0.2.deb &
+				wget -O $soft.deb https://dl.discordapp.net/apps/linux/0.0.2/discord-0.0.2.deb
 				apt-get install ./$soft.deb -y
 				;;
 			*)
