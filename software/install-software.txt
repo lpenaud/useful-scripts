@@ -37,3 +37,5 @@ python3-pip
 xbacklight
 screenfetch
 glade
+p7zip-full
+p7zip-rar
