@@ -61,6 +61,10 @@ add-apt-repository ppa:nginx/stable -y
 eco "Adding Node.js v.$nodejsVersion.x repository..."
 curl -sL https://deb.nodesource.com/setup_$nodejsVersion.x | -E bash -
 
+eco "Adding etcher repository..."
+echo "deb https://dl.bintray.com/resin-io/debian stable etcher" | tee /etc/apt/sources.list.d/etcher.list
+apt-key adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 379CE192D401AB61 -y
+
 eco "Updating all repositories..."
 apt-get update
 
@@ -85,6 +89,9 @@ do
 				wget -O $soft.deb https://dl.discordapp.net/apps/linux/0.0.2/discord-0.0.2.deb
 				apt-get install ./$soft.deb -y
 				;;
+			"atom")
+				snap install $soft --classic -y
+				;;
 			*)
 				apt-get install $soft -y
 				;;
@@ -101,9 +108,5 @@ eco "Executing autoremove..."
 apt-get autoremove -y
 
 cd $OLDPWD
-
-eco "Copying the nginx configuration example & save the default configuration"
-mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.save
-cp nginx-conf-example /etc/nginx/sites-available/default
 
 mysql_secure_installation
