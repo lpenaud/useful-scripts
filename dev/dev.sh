@@ -38,6 +38,7 @@ then
             /etc/init.d/nginx $1
             /etc/init.d/mysql $1
             /etc/init.d/php7.0-fpm $1
+	    service mongod $1
         fi
     else
         help
