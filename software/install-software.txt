@@ -39,3 +39,7 @@ screenfetch
 glade
 p7zip-full
 p7zip-rar
+shotwell
+atom
+etcher-electron
+gdebi
