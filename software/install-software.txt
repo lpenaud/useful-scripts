@@ -43,3 +43,10 @@ shotwell
 atom
 etcher-electron
 gdebi
+ffmpeg
+obs-studio
+kdenlive
+plasma-workspace
+plasma-desktop
+pandoc
+
