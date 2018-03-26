@@ -1,4 +1,0 @@
-grunt
-create-react-app
-loopback-cli
-jsdoc

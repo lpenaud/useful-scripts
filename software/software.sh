@@ -92,12 +92,6 @@ do
 		esac
 done
 
-for package in $installNpm
-do
-	eco "Global installation of the node package named $package..."
-	npm install -g $package
-done
-
 eco "Executing autoremove..."
 apt-get autoremove -y
 
