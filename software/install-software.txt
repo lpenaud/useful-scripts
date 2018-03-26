@@ -1,3 +1,5 @@
+snapd
+snapd-xdg-open
 firefox
 nextcloud-client
 redshift-gtk
@@ -10,13 +12,13 @@ geogebra
 gimp
 inkscape
 xsane
-chromium-browser
+brave
 vlc
 gnome-disk-utility
 openjdk-8-jre
 gnome-system-monitor
 git
-gitKraken
+gitkraken
 vscode
 nodejs
 php
@@ -41,7 +43,6 @@ p7zip-full
 p7zip-rar
 shotwell
 atom
-etcher-electron
 gdebi
 ffmpeg
 obs-studio
@@ -49,4 +50,5 @@ kdenlive
 plasma-workspace
 plasma-desktop
 pandoc
-
+skype
+slack

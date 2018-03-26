@@ -37,7 +37,8 @@ installSoft=`cat install-software.txt`
 installNpm=`cat install-npm.txt`
 
 eco "Which nodejs version do you want to install ?"
-eco "Release calendar : https://github.com/nodejs/Release#release-schedule1"
+echo "Release calendar : https://github.com/nodejs/Release#release-schedule1"
+echo "Example v8"
 read -p "v" nodejsVersion
 
 for soft in $removeSoft
@@ -61,10 +62,6 @@ add-apt-repository ppa:nginx/stable -y
 eco "Adding Node.js v.$nodejsVersion.x repository..."
 curl -sL https://deb.nodesource.com/setup_$nodejsVersion.x | -E bash -
 
-eco "Adding etcher repository..."
-echo "deb https://dl.bintray.com/resin-io/debian stable etcher" | tee /etc/apt/sources.list.d/etcher.list
-apt-key adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 379CE192D401AB61 -y
-
 eco "Updating all repositories..."
 apt-get update
 
@@ -77,21 +74,18 @@ for soft in $installSoft
 do
 	eco "Installing $soft..."
 		case $soft in
-			"gitKraken")
-				wget -O $soft.deb https://release.gitkraken.com/linux/gitkraken-amd64.deb
-				apt-get install ./$soft.deb -y
+			"vscode"|"atom"|"slack"|"skype")
+				snap install $soft --classic
 				;;
-			"vscode")
-				wget -O $soft.deb https://go.microsoft.com/fwlink/?LinkID=760868
-				apt-get install ./$soft.deb -y
+			"gitkraken"|"discord")
+				snap install $soft
+<<<<<<< HEAD
+=======
 				;;
-			"discord")
-				wget -O $soft.deb https://dl.discordapp.net/apps/linux/0.0.2/discord-0.0.2.deb
-				apt-get install ./$soft.deb -y
+			"brave")
+				snap install brave --beta
 				;;
-			"atom")
-				snap install $soft --classic -y
-				;;
+>>>>>>> 8b73f9e... Update software.sh
 			*)
 				apt-get install $soft -y
 				;;
