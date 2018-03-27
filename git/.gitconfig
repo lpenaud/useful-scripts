@@ -1,0 +1,17 @@
+[user]
+	email = l.penaud@zaclys.net
+	name = lpenaud
+[core]
+	editor = vim
+[merge]
+	tool = vimdiff
+	conflictstyle = diff3
+[mergetool]
+	prompt = false
+[alias]
+	ci = commit
+	lg = log --oneline --graph --decorate
+	rbase = rebase --interactive
+	st = status
+	unstage = reset HEAD
+	reset-file = checkout --

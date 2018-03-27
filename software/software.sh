@@ -29,7 +29,7 @@ function eco {
 if [ $EUID -ne 0 ]
 then
 	echo "This script must be run as root"
-	exit
+	exit 1
 fi
 
 removeSoft=`cat remove-software.txt`
@@ -73,23 +73,20 @@ cd $HOME/Téléchargements
 for soft in $installSoft
 do
 	eco "Installing $soft..."
-		case $soft in
-			"vscode"|"atom"|"slack"|"skype")
-				snap install $soft --classic
-				;;
-			"gitkraken"|"discord")
-				snap install $soft
-<<<<<<< HEAD
-=======
-				;;
-			"brave")
-				snap install brave --beta
-				;;
->>>>>>> 8b73f9e... Update software.sh
-			*)
-				apt-get install $soft -y
-				;;
-		esac
+	case $soft in
+		"vscode"|"atom"|"slack"|"skype")
+			snap install $soft --classic
+			;;
+		"gitkraken"|"discord")
+			snap install $soft
+			;;
+		"brave")
+			snap install brave --beta
+			;;
+		*)
+			apt-get install $soft -y
+			;;
+	esac
 done
 
 eco "Executing autoremove..."
