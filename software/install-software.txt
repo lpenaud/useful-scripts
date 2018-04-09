@@ -22,7 +22,7 @@ gitkraken
 vscode
 nodejs
 php
-php7.0-fpm
+php7*-fpm
 php-mysql
 php-pgsql
 php-sqlite
