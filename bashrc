@@ -1,12 +1,20 @@
-#
-# ~/.bashrc
-#
-
-# If not running interactively, don't do anything
-[[ $- != *i* ]] && return
-
+BOLD="\[$(tput bold)\]"
+RED="\[$(tput setaf 1)\]"
 GREEN="\[$(tput setaf 2)\]"
-RESET="\[$(tput sgr0)\]"
 BLUE="\[$(tput setaf 6)\]"
-alias ls='ls --color=auto'
-PS1="[${GREEN}\u@\h ${BLUE}\w${RESET}]\$ "
+RESET="\[$(tput sgr0)\]"
+
+# Change prompt if root is the current user
+if [[ ${EUID} == 0 ]] ; then
+	PS1="[${BOLD}${RED}\u@\h${RESET}"
+else
+	PS1="[${BOLD}${GREEN}\u@\h${RESET}"
+fi
+
+PS1="${PS1} ${BLUE}\w${RESET}]\$"
+
+unset BOLD RED GREEN RESET BLUE
+
+# https://github.com/magicmonty/bash-git-prompt.git
+GIT_PROMPT_ONLY_IN_REPO=1
+source ~/.bash-git-prompt/gitprompt.sh
