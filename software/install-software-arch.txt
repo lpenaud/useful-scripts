@@ -23,3 +23,6 @@ atom
 obs-studio
 kdenlive
 pandoc
+gutenprint
+libcups
+ccrypt
