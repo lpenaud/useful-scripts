@@ -26,3 +26,16 @@ pandoc
 gutenprint
 libcups
 ccrypt
+base-devel
+brave
+nextcloud-client
+clang
+firefox-i18n-fr
+thunderbird-i18n-fr
+firefox-developer-edition-i18n-fr
+gimp-help-fr
+hyphen-fr
+aspell-fr
+libreoffice-still-fr
+mythes-fr
+chromium

@@ -1,0 +1,5 @@
+spek-git
+visual-studio-code-bin
+package-query
+yaourt
+xfce-theme-manager

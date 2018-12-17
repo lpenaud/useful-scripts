@@ -1,4 +1,0 @@
-firefox
-mousepad
-parole
-xfce4-taskmanager
