@@ -16,5 +16,7 @@ PS1="${PS1} ${BLUE}\w${RESET}]\$"
 unset BOLD RED GREEN RESET BLUE
 
 # https://github.com/magicmonty/bash-git-prompt.git
-GIT_PROMPT_ONLY_IN_REPO=1
-source ~/.bash-git-prompt/gitprompt.sh
+if [ -e ~/.bash-git-prompt/gitprompt.sh ] ; then
+	GIT_PROMPT_ONLY_IN_REPO=1
+	source ~/.bash-git-prompt/gitprompt.sh
+fi
