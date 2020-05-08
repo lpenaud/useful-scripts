@@ -1,6 +1,9 @@
 [user]
 	email = l.penaud@zaclys.net
 	name = lpenaud
+[credential]
+	# Timeout in seconds, here 5 minutes by default 15
+	helper = cache --timeout 300
 [core]
 	editor = vim
 [merge]
