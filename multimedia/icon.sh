@@ -15,6 +15,6 @@ assert_code
 if [ $# -eq 2 ]; then
   outfile="$(parse_output_file "${2}" ".ico" "${infile}")"
 else
-  outfile="$(filename_ext "${infile}").ico"
+  outfile="$(get_filename "${infile}").ico"
 fi
 log_exec convert -resize 16x16 "${infile}" "${outfile}"
