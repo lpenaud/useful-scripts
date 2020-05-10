@@ -3,6 +3,26 @@
 # Useful functions
 
 #######################################
+# Ask user if they want to overwrite file only if it exists
+# Arguments:
+#   Filename, path
+# Output:
+#   Prompt before overwrite on stderr.
+# Returns:
+#   0 if the file not exists or can be overwrite, otherwise 1.
+#######################################
+function overwrite () {
+  local f
+  if [ -e "${1}" ]; then
+    read -p "Overwrite '${1}' [y/N]? " f
+    if [ "${f,,}" != "y" ]; then
+      return 1
+    fi
+  fi
+  return 0
+}
+
+#######################################
 # Get dirname from string subtitution.
 # Arguments:
 #   Filename, pathname
@@ -35,7 +55,7 @@ function get_filename () {
 function get_basename () {
   local basename="$(echo "${1##*/}")"
   if [ -n "${2}" ]; then
-    local basename="$(get_filename "${basename}")"
+    basename="$(get_filename "${basename}")"
   fi
   echo "${basename}"
 }
