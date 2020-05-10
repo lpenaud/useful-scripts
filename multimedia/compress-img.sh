@@ -1,32 +1,15 @@
 #!/bin/bash
 # 
 # Compress picture
-#TODO: Webp support
 #TODO: Add -resize WxH
 #TODO: Color?
 
 DIRNAME="$(dirname ${0})"
 . "${DIRNAME}/../helpers/functions"
+import "../helpers/infiles"
 
-function compress () {
-  local ext="$(get_extension "${1}")"
-  local dst="${2}.jpg"
-  local force="n"
-  if [[ ! "${ext,,}" =~ (png|jpe{0,1}g|webp|gif)$ ]]; then
-    echo "Warning: Ignore '${1}'" >&2
-    return 1
-  fi
-  if [ -e "${dst}" ]; then
-    read -p "Overwrite '${dst}' [y/N]? " force
-    if [ ! "${force,,}" = "y" ]; then
-      echo "Warning: Ignore '${1}'" >&2
-      return 2
-    fi
-  fi
-  log_exec convert -sampling-factor 4:2:0 -strip -quality 85 -interlace JPEG -colorspace sRGB "${1}" "${dst}"
-}
+declare -a infiles
 
-infiles=()
 while [ $# -ne 0 ]; do
   case "${1}" in
     -p | --prefix)
@@ -37,11 +20,19 @@ while [ $# -ne 0 ]; do
       outdir="${2}"
       shift
       ;;
+    -f | --force)
+      force=y
+      ;;
+    --webp)
+      webp=y
+      ;;
     *)
-      # TODO: Directory test
-      infiles+=("$(parse_input_file "${1}")")
-      if [ $? -ne 0 ]; then
-        error=true
+      if [ -d "${1}" ]; then
+        add_infiles infiles "${1}" "(png|jpe{0,1}g|gif)$"
+      elif [ -f "${1}" ]; then
+        infiles+=("${1}")
+      else
+        echo "Warning: '${1}' is not a file or directory" >&2
       fi
       ;;
   esac
@@ -49,20 +40,48 @@ while [ $# -ne 0 ]; do
 done
 
 if [ ${#infiles[@]} -eq 0 ]; then
-  print_usage "[(-o --outdir) OUTDIR] [(-p --prefix) PREFIX] <infile> [...infiles]"
+  print_usage "[(-o --outdir) OUTDIR] [(-p --prefix) PREFIX] [(-f --force)] [--webp] <infile> [...infiles]"
   exit 1
 fi
 if [ -n "${error}" ]; then
   exit 1
 fi
 
-if [ -z "${outdir}" ]; then
-  for infile in "${infiles[@]}"; do
-    compress "${infile}" "$(get_filename "${infile}")${prefix}"
+cmd=("convert" "-sampling-factor" "4:2:0" "-strip" "-quality" "85" "-colorspace" "sRGB")
+if [ -n "${webp}" ]; then
+  prefix="${prefix}.webp"
+else
+  prefix="${prefix}.jpg"
+  cmd+=(-interlace JPEG)
+fi
+
+if [ -n "${outdir}" ]; then
+  if [ -e "${outdir}" ]; then
+    if [ ! -d "${outdir}" ]; then
+      echo "Error: '${outdir}' already exists and it's not a directory" >&2
+      exit 1
+    fi
+  else
+    log_exec mkdir -p "${outdir}"  
+  fi
+else
+  outdir="$(get_dirname "${infiles[0]}")"
+fi
+
+readonly SRC_INDEX="${#cmd[@]}"
+readonly DEST_INDEX="$((SRC_INDEX + 1))"
+if [ -n "${force}" ]; then
+  for file in "${infiles[@]}"; do
+    cmd[$SRC_INDEX]="${file}"
+    cmd[$DEST_INDEX]="${outdir}/$(get_basename "${file}" y)${prefix}"
+    log_exec "${cmd[@]}"
   done
 else
-  log_exec mkdir -p "$(get_dirname "${outdir}")"
-  for infile in "${infiles[@]}"; do
-    compress "${infile}" "${outdir}/$(get_basename "${infile}" true)${prefix}"
+  for file in "${infiles[@]}"; do
+    cmd[$SRC_INDEX]="${file}"
+    cmd[$DEST_INDEX]="${outdir}/$(get_basename "${file}" y)${prefix}"
+    if overwrite "${cmd[$DEST_INDEX]}"; then
+      log_exec "${cmd[@]}"
+    fi
   done
 fi
