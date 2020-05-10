@@ -1,6 +1,8 @@
 # DO NOT MODIFY THIS FILE
 #
 # Useful functions
+# Required Bash version 4 and above to work
+# Due to string case manipulation
 
 #######################################
 # Ask user if they want to overwrite file only if it exists
@@ -301,8 +303,8 @@ function is_flag () {
 function import () {
   local file="${DIRNAME}/${1}"
   if [ ! -f "${file}" ]; then
-    echo "Warning: '${file}' doesn't exit" >&2
-    return 1
+    echo "Error: Cannot import '${file}'" >&2
+    exit 1
   fi
   . "${file}"
 }
