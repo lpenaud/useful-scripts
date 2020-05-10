@@ -1,0 +1,44 @@
+# DO NOT MODIFY THIS FILE
+#
+# Useful functions to add input files
+# Required Bash version 4.3 and above to work
+# Due to nameref variable
+
+function add_infiles () {
+  if [ -f "${2}" ]; then
+    add_infile $1 "${2}" "${3}"
+  elif [ -d "${2}" ]; then
+    add_directory $1 "${2}" "${3}"
+  else
+    echo "Warning: Ignore '${2}'" >&2
+    return 1
+  fi
+}
+
+function add_infile () {
+  local -n files=$1
+  if [[ "${2}" =~ $3 ]]; then
+    files+=("${2}")
+    return 0
+  fi
+  echo "Warning: Ignore '${file}'" >&2
+  return 1
+}
+
+function add_directory () {
+  local -n files=$1
+  local dir
+  # Remove last '/' if any
+  if [[ "${2}" =~ \/$ ]]; then
+    dir="${2:0:$((${#2} - 1))}"
+  else
+    dir="${2}"
+  fi
+  for file in "${dir}"/*; do
+    if [ -f "${file}" ] && [[ "${file,,}" =~ $3 ]]; then
+      files+=("${file}")
+    else
+      echo "Warning: Ignore '${file}'" >&2
+    fi
+  done
+}
