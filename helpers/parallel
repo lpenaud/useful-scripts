@@ -1,0 +1,76 @@
+# DO NOT MODIFY THIS FILE
+#
+# Functions to do things in parallel
+
+#######################################
+# Init required variables `PARALLEL_COUNT` & `PARALLEL_MAX`
+# You can init variables by yourself if you want
+# Globals:
+#   PARALLEL_COUNT
+#   PARALLEL_MAX
+#######################################
+function parallel::init () {
+  declare -g -i PARALLEL_COUNT=0
+  # See https://stackoverflow.com/questions/6481005/how-to-obtain-the-number-of-cpus-cores-in-linux-from-the-command-line#answer-23569003
+  declare -g -i PARALLEL_MAX=$(getconf _NPROCESSORS_ONLN)
+}
+
+#######################################
+# Wait running tasks with their pid.
+# If pid is omit, then wait for first finished task
+# Globals:
+#   PARALLEL_COUNT
+# Arguments:
+#   ...pids (optional)
+#######################################
+function parallel::wait () {
+  if [ $PARALLEL_COUNT -eq 0 ]; then
+    return 0
+  fi
+  if [ $# -eq 0 ]; then
+    wait
+    (( PARALLEL_COUNT-- ))
+    return 0
+  fi
+  while [ $# -ne 0 ]; do
+    wait "${1}"
+    (( PARALLEL_COUNT-- ))
+    shift
+  done
+}
+
+#######################################
+# Create tasks with the given commands
+# Globals:
+#   PARALLEL_COUNT
+#   PARALLEL_MAX
+# Arguments:
+#   ...commands
+# Outputs:
+#   Write task pid on stdout.
+#######################################
+function parallel::run () {
+  local -a cmd
+  while [ $# -ne 0 ]; do
+    if [ $PARALLEL_COUNT -ge $PARALLEL_MAX ]; then
+      parallel::wait
+    fi
+    cmd=("${1}")
+    eval "${cmd[@]}" &
+    echo $!
+    (( PARALLEL_COUNT++ ))
+    shift
+  done
+}
+
+#######################################
+# Wait all running tasks
+# Globals:
+#   PARALLEL_COUNT
+#######################################
+function parallel::wait_all () {
+  while [ $PARALLEL_COUNT -ne 0 ]; do
+    wait
+    (( PARALLEL_COUNT-- ))
+  done
+}
