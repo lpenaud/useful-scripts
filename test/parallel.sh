@@ -7,9 +7,12 @@ DIRNAME="$(dirname "${0}")"
 
 function test_1 () {
   local prefix="test_1"
+  local -a com
   assert_equals 0 "${PARALLEL_COUNT}" "${prefix} - PARALLEL_COUNT expected to be equals 0 at the start"
-  parallel::run "sleep 3"
-  parallel::run "sleep 2"
+  com=(sleep 3)
+  parallel::run com
+  com=(sleep 1)
+  parallel::run com
   assert_equals 2 "${PARALLEL_COUNT}" "${prefix} - PARALLEL_COUNT expected to be equals 2"
   parallel::wait_all
   assert_equals 0 "${PARALLEL_COUNT}" "${prefix} - PARALLEL_COUNT expected to be equals 0 at the end"
@@ -17,17 +20,18 @@ function test_1 () {
 
 function test_2 () {
   local prefix="test_2"
-  local -a tasks
+  local -i idt1 idt2
+  local -a com
   assert_equals 0 "${PARALLEL_COUNT}" "${prefix} - PARALLEL_COUNT expected to be equals 0 at the start"
-  tasks+=("$(parallel::run "sleep 10")")
-  tasks+=("$(parallel::run "sleep 2")")
-  echo "${PARALLEL_COUNT}"
-  assert_equals 2 "${PARALLEL_COUNT}" "HEIN"
-  assert_equals 2 "${#tasks}" "SIZE"
-  kill -kill "${tasks[0]}"
-  parallel::wait "${tasks[0]}"
-  echo "${tasks[0]} was terminated by a SIG$(kill −l $?) signal."
-  parallel::wait_all
+  com=(sleep 10)
+  parallel::run com idt1
+  com=(sleep 2)
+  parallel::run com idt2
+  assert_equals 2 "${PARALLEL_COUNT}" "${prefix} - PARALLEL_COUNT expected to be equals 2"
+  kill -kill "${idt1}"
+  parallel::wait "${idt1}" "${idt2}"
+  # Same as parallel::wait_all
+  assert_equals 0 "${PARALLEL_COUNT}" "${prefix} - PARALLEL_COUNT expected to be equals 0 at the end"
 }
 
 parallel::init
