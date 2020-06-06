@@ -1,1 +1,4 @@
 DEBUG=true
+#CONFIG=<path to nextcloud config file>
+#BACKUP=<path to backup directory>
+#OCC=<path to nextcloud php executable>
