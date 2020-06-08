@@ -1,8 +1,5 @@
-# DO NOT MODIFY THIS FILE
-#
 # Useful functions
 # Required Bash version 4 and above to work
-# Due to string case manipulation
 
 #######################################
 # Ask user if they want to overwrite file only if it exists
@@ -14,10 +11,10 @@
 #   0 if the file not exists or can be overwrite, otherwise 1.
 #######################################
 function overwrite () {
-  local f
+  local -l f
   if [ -e "${1}" ]; then
     read -p "Overwrite '${1}' [y/N]? " f
-    if [ "${f,,}" != "y" ]; then
+    if [ "${f}" != "y" ]; then
       return 1
     fi
   fi
