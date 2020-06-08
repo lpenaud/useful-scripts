@@ -1,5 +1,3 @@
-# DO NOT MODIFY THIS FILE
-#
 # Add style to terminal
 
 function style::run () {
@@ -196,6 +194,6 @@ function style::bg_white () {
   style::run 107
 }
 
-function style::default_bg () {
+function style::reset_bg () {
   style::run 49
 }
