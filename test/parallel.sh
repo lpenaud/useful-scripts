@@ -14,7 +14,7 @@ function test_1 () {
   com=(sleep 1)
   parallel::run com
   assert_equals 2 "$(parallel::count)" "${prefix} - parallel::count expected to be equals 2 but $(parallel::count)"
-  wait
+  parallel::wait
   assert_equals 0 "$(parallel::count)" "${prefix} - parallel::count expected to be equals 0 at the end but $(parallel::count)"
 }
 
@@ -24,9 +24,11 @@ function test_2 () {
   local -a com
   assert_equals 0 "$(parallel::count)" "${prefix} - parallel::count expected to be equals 0 at the start but $(parallel::count)"
   com=(sleep 10)
-  parallel::run com idt1
+  parallel::run com
+  idt1=$!
   com=(sleep 2)
-  parallel::run com idt2
+  parallel::run com
+  idt2=$!
   assert_equals 2 "$(parallel::count)" "${prefix} - parallel::count expected to be equals 2 but $(parallel::count)"
   kill -kill "${idt1}"
   wait "${idt1}" "${idt2}"
