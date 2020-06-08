@@ -4,9 +4,10 @@
 #TODO: Add -resize WxH
 #TODO: Color?
 
-DIRNAME="$(dirname ${0})"
+readonly DIRNAME="$(dirname ${0})"
 . "${DIRNAME}/../helpers/functions"
 import "../helpers/infiles"
+import "../helpers/parallel"
 
 declare -a infiles
 
@@ -52,7 +53,7 @@ if [ -n "${webp}" ]; then
   prefix="${prefix}.webp"
 else
   prefix="${prefix}.jpg"
-  cmd+=(-interlace JPEG)
+  cmd+=("-interlace" "JPEG")
 fi
 
 if [ -n "${outdir}" ]; then
@@ -70,18 +71,20 @@ fi
 
 readonly SRC_INDEX="${#cmd[@]}"
 readonly DEST_INDEX="$((SRC_INDEX + 1))"
+parallel::init
 if [ -n "${force}" ]; then
   for file in "${infiles[@]}"; do
     cmd[$SRC_INDEX]="${file}"
     cmd[$DEST_INDEX]="${outdir}/$(get_basename "${file}" y)${prefix}"
-    log_exec "${cmd[@]}"
+    parallel::run cmd
   done
 else
   for file in "${infiles[@]}"; do
     cmd[$SRC_INDEX]="${file}"
     cmd[$DEST_INDEX]="${outdir}/$(get_basename "${file}" y)${prefix}"
     if overwrite "${cmd[$DEST_INDEX]}"; then
-      log_exec "${cmd[@]}"
+      parallel::run cmd
     fi
   done
 fi
+parallel::wait
