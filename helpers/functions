@@ -80,7 +80,7 @@ function get_extension () {
 #		Write errors message to stderr.
 #######################################
 function raise () {
-  local exit_code=$1
+  local -i exit_code=$1
   shift
   if [ $# -eq 0 ]; then
     echo "Unknow error" >&2
@@ -156,6 +156,27 @@ function assert_code () {
   if [ $code -ne 0 ]; then
     exit $code
   fi
+}
+
+#######################################
+# Assert if a value is a positive number
+# Arguments:
+#		Value to test
+#   Error message (optinal)
+# Outputs:
+#		Write an error message to stderr if the value isn't a positive number.
+# Exit
+#   1 If the number is not a positive number
+#######################################
+function assert_is_positive () {
+  local msg="${2}"
+  if [ "${1}" -gt 0 ] 2> /dev/null; then
+    return 0
+  fi
+  if [ -z "${msg}" ]; then
+    msg="'${1}' is not a positive number"
+  fi
+  raise 1 "${msg}"
 }
 
 #######################################
