@@ -1,0 +1,23 @@
+# Require bash 4.4 or above
+
+function array::index_of () {
+  local -n index_of=$1
+  for i in "${!index_of[@]}"; do
+    if [ "${index_of[${i}]}" = "${2}" ]; then
+      echo "${i}"
+      return 0
+    fi
+  done
+  echo "-1"
+  return 1
+}
+
+function array::get_last_index () {
+  local -n get_last_index=$1
+  echo "$(( ${#get_last_index[@]} - 1 ))"
+}
+
+function array::get_last_value () {
+  local -n get_last_value=$1
+  echo "${get_last_value[$(array::get_last_index get_last_value)]}"
+}
