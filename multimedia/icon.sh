@@ -2,8 +2,7 @@
 # Create 16x16 icon from an picture (jpg, png, WebP...).
 #
 
-declare -r FILENAME="$(realpath -P "${0}")"
-declare -r DIRNAME="${FILENAME%\/*}"
+DIRNAME="$(dirname ${0})"
 . "${DIRNAME}/../helpers/functions"
 
 if [ $# -eq 0 ] || [ $# -gt 2 ]; then

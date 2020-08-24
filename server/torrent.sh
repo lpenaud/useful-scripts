@@ -2,8 +2,7 @@
 # Activate protonvpn and transmisssion torrent client
 #
 
-declare -r FILENAME="$(realpath -P "${0}")"
-declare -r DIRNAME="${__FILENAME%\/*}"
+DIRNAME="$(dirname ${0})"
 . "${DIRNAME}/../helpers/functions"
 
 function usage () {

@@ -4,8 +4,7 @@
 #TODO: Add -resize WxH
 #TODO: Color?
 
-declare -r FILENAME="$(realpath -P "${0}")"
-declare -r DIRNAME="${__FILENAME%\/*}"
+readonly DIRNAME="$(dirname ${0})"
 . "${DIRNAME}/../helpers/functions"
 import "../helpers/infiles"
 import "../helpers/parallel"
