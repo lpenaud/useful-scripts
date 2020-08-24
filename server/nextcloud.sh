@@ -2,7 +2,8 @@
 # Backup nextcloud
 #
 
-DIRNAME="$(dirname ${0})"
+declare -r FILENAME="$(realpath -P "${0}")"
+declare -r DIRNAME="${FILENAME%\/*}"
 . "${DIRNAME}/../helpers/functions"
 import "params"
 
@@ -96,6 +97,5 @@ log_exec mkdir -p "${BACKUP}"
 log_exec sudo -u http php "${OCC}" maintenance:mode --on
 db_dump &
 rsync_backup datadirectory data &
-wait
 wait
 log_exec sudo -u http php "${OCC}" maintenance:mode --on

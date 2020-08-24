@@ -1,6 +1,7 @@
 #!/bin/bash
 
-declare -r DIRNAME="$(dirname "${0}")"
+declare -r FILENAME="$(realpath -P "${0}")"
+declare -r DIRNAME="${FILENAME%\/*}"
 . "${DIRNAME}/../helpers/functions"
 import "../helpers/array"
 
