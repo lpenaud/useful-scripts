@@ -66,6 +66,7 @@ function main () {
           echo "${cmd[@]}" >&2
           "${cmd[@]}" >> /dev/null
           cmd=()
+	   documents+=("$(array::get_last_value tmp_docs)")
         fi
         ;;
     esac
@@ -73,7 +74,6 @@ function main () {
   done
   set_cmd cmd "${outfile}"
   cmd+=("${documents[@]}")
-  cmd+=("${tmp_doc[@]}")
   echo "${cmd[@]}" >&2
   "${cmd[@]}" >> /dev/null
   if [ "${#tmp_doc[@]}" -ne 0 ]; then
