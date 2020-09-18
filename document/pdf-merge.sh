@@ -14,7 +14,7 @@ function set_cmd () {
 }
 
 function main () {
-  local -a cmd documents tmp_doc
+  local -a cmd documents tmp_docs
   # $first and $last aren't integer variable because bash set their value to 0 even if is set to empty
   local first last list is_sub outfile="-"
   while [ $# -ne 0 ]; do
@@ -56,17 +56,17 @@ function main () {
           cmd+=("-sPageList=${list}")
           list=""
         fi
-        if [ "${#cmd[@]}" -eq 0 ]; then
+        if array::is_empty cmd; then
           documents+=("${1}")
         else
           # GhostScript doesn't work like mkvmerge
           cmd+=("${1}")
-          tmp_doc+=("$(mktemp --suffix=.pdf)")
-          set_cmd cmd "$(array::get_last_value tmp_doc)"
+          tmp_docs+=("$(mktemp --suffix=.pdf)")
+          set_cmd cmd "$(array::get_last_value tmp_docs)"
           echo "${cmd[@]}" >&2
           "${cmd[@]}" >> /dev/null
           cmd=()
-	   documents+=("$(array::get_last_value tmp_docs)")
+					documents+=("$(array::get_last_value tmp_docs)")
         fi
         ;;
     esac
@@ -76,8 +76,8 @@ function main () {
   cmd+=("${documents[@]}")
   echo "${cmd[@]}" >&2
   "${cmd[@]}" >> /dev/null
-  if [ "${#tmp_doc[@]}" -ne 0 ]; then
-    cmd=(rm "${tmp_doc[@]}")
+  if array::is_not_empty tmp_docs; then
+    cmd=(rm "${tmp_docs[@]}")
     echo "${cmd[@]}" >&2
     "${cmd[@]}"
   fi

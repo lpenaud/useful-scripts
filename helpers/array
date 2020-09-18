@@ -21,3 +21,19 @@ function array::get_last_value () {
   local -n get_last_value=$1
   echo "${get_last_value[$(array::get_last_index get_last_value)]}"
 }
+
+function array::is_empty () {
+	local -n is_empty=$1
+	if [ "${#is_empty}" -eq 0 ]; then
+		return 0
+	fi
+	return 1
+}
+
+function array::is_not_empty () {
+	local -n is_not_empty=$1
+	if [ "${#is_not_empty}" -eq 0 ]; then
+		return 1
+	fi
+	return 0
+}
