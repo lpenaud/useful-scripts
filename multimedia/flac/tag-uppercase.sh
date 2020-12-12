@@ -14,7 +14,7 @@ function main () {
       tags+=("--remove-tag=${tag}" "--set-tag=${tag}=${BASH_REMATCH[2]}")
     fi
   done < <(metaflac --list --block-type=VORBIS_COMMENT "${1}")
-  metaflac ${tags[@]}
+  metaflac ${tags[@]} "${1}"
 }
 
 declare -a cmd=("main")
