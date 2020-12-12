@@ -1,8 +1,8 @@
 #!/bin/bash
 
 declare -r DIRNAME="${0%\/*}"
-. "${DIRNAME}/../functions"
-. "${DIRNAME}/../array"
+. "${DIRNAME}/../../helpers/functions"
+. "${DIRNAME}/../../helpers/array"
 
 # metadata_dict, infile, ...tags_to_read
 function read_tags () {

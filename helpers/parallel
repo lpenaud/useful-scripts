@@ -69,11 +69,5 @@ function parallel::run () {
 #   0 
 #######################################
 function parallel::wait () {
-  # `wait` should waits for all currently active child processes
-  # But is different than wait <id ...>
-  local -i code err=0
-  while [ "$(parallel::count)" -ne 0 ]; do
-    wait -n
-  done
-  return 0
+  wait
 }

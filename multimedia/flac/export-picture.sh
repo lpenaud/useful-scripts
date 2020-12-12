@@ -1,7 +1,7 @@
 #!/bin/bash
 
 declare -r DIRNAME="${0%\/*}"
-. "${DIRNAME}/../functions"
+. "${DIRNAME}/../../helpers/functions"
 
 # track
 function get_picture_mime_type () {
