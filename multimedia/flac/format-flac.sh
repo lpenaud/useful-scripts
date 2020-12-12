@@ -43,6 +43,7 @@ function format_names () {
   if [ -z "${infos[TRACKTOTAL]}" ]; then
     metaflac --set-tag=TRACKTOTAL="${#tracks[@]}" "${1}"/*.flac
   fi
+  mv "${1}" "${infos[DATE]} ${infos[ALBUM]}"
 }
 
 # exit_code
