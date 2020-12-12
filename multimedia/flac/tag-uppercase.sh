@@ -11,7 +11,7 @@ function main () {
   while read -e line; do
     if [[ "${line}" =~ ^[[:space:]]*comment\[[0-9]+\]:[[:space:]]*(.+)=(.+)$ ]]; then
       tag="${BASH_REMATCH[1]}"
-      metadata+=("--remove-tag=${tag}" "--set-tag=${tag}=${BASH_REMATCH[2]}")
+      tags+=("--remove-tag=${tag}" "--set-tag=${tag}=${BASH_REMATCH[2]}")
     fi
   done < <(metaflac --list --block-type=VORBIS_COMMENT "${1}")
   metaflac ${tags[@]}
