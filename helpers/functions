@@ -200,6 +200,10 @@ function get_editor () {
 #		Write usages of an program to stdout.
 #######################################
 function print_usage () {
+  if [ $# -eq 1 ]; then
+    echo "Usage: ${0} ${1}"
+    return 0
+  fi
   echo "Usage:"
   while [ $# -ne 0 ]; do
     echo "  ${0} ${1}"

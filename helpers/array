@@ -32,8 +32,8 @@ function array::is_empty () {
 
 function array::is_not_empty () {
 	local -n is_not_empty=$1
-	if [ "${#is_not_empty}" -eq 0 ]; then
-		return 1
+	if [ "${#is_not_empty}" -gt 0 ]; then
+		return 0
 	fi
-	return 0
+	return 1
 }
