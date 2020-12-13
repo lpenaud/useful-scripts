@@ -34,11 +34,16 @@ function format_names () {
     echo "Not flac files found" >&2
     return 1
   fi
+  rm -f "${1}"/*.m3u
   for f in "${tracks[@]}"; do
     read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL
-    printf -v filename "%s/%02d - %s.flac" "${1}" "${infos[TRACKNUMBER]}" "${infos[TITLE]}"
-    mv "${f}" "${filename}"
-    echo "${filename}" >> "00 - ${infos[ALBUM]}.m3u"
+    # printf can interpret TRACKNUMBER as an octal number
+    if [[ "${infos[TRACKNUMBER]}" =~ ^0([0-9]+)$ ]]; then
+      infos[TRACKNUMBER]="${BASH_REMATCH[1]}"
+    fi
+    printf -v filename "%02d - %s.flac" "${infos[TRACKNUMBER]}" "${infos[TITLE]}"
+    mv "${f}" "${1}/${filename}"
+    echo "${filename}" >> "${1}/00 - ${infos[ALBUM]}.m3u"
   done
   if [ -z "${infos[TRACKTOTAL]}" ]; then
     metaflac --set-tag=TRACKTOTAL="${#tracks[@]}" "${1}"/*.flac
