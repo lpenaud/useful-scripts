@@ -28,6 +28,9 @@ function get_tag_format () {
     TRACKNUMBER)
       echo -n "%02d"
       ;;
+    DISCNUMBER)
+      echo -n "%d"
+      ;;
     *)
       echo -n "%s"
       ;;
@@ -38,20 +41,20 @@ function get_tag_format () {
 function format_from_template () {
   local -n metadata=$1
   local -a values
-  local rematch="${2}" result
+  local rematch="${2}" result="${2%%\%*}"
   while [[ "${rematch}" =~ %([A-Z]+)(.*)$ ]]; do
     result+="$(get_tag_format "${BASH_REMATCH[1]}")${BASH_REMATCH[2]%%\%*}"
     values+=("${metadata[${BASH_REMATCH[1]}]}")
     rematch="${BASH_REMATCH[2]}"
   done
-  printf "${result}.flac" "${values[@]}"
+  printf "${result}" "${values[@]}"
 }
 
-# directory, [template='%TRACKNUMBER - %TITLE']
+# tracks_directory, [track='%TRACKNUMBER - %TITLE'], [playlist='00 - %ALBUM'], [directory='%DATE %ALBUM']
 function format_names () {
   local -A infos
   local -a tracks
-  local f filename template="${2:-%TRACKNUMBER - %TITLE}"
+  local f filename template="${2:-%TRACKNUMBER - %TITLE}" playlist="${3:-00 - %ALBUM}" directory="${4:-%DATE %ALBUM}"
   for f in "${1}"/*.flac; do
     tracks+=("${f}")
   done
@@ -59,32 +62,76 @@ function format_names () {
     echo "Not flac files found" >&2
     return 1
   fi
-  rm -f "${1}"/*.m3u
+
+  # Renames tracks
   for f in "${tracks[@]}"; do
-    read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL ARTIST
+    read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL ARTIST DISCNUMBER
     # printf can interpret TRACKNUMBER as an octal number
     if [[ "${infos[TRACKNUMBER]}" =~ ^0([0-9]+)$ ]]; then
       infos[TRACKNUMBER]="${BASH_REMATCH[1]}"
     fi
-    filename="$(format_from_template infos "${template}")"
+    filename="$(format_from_template infos "${template}").flac"
     mv "${f}" "${1}/${filename}"
-    echo "${filename}" >> "${1}/00 - ${infos[ALBUM]}.m3u"
   done
+
+  # Generate playlist
+  rm -f "${1}"/*.m3u
+  filename="${1}/$(format_from_template infos "${playlist}").m3u"
+  for f in "${1}"/*.flac; do
+    echo "$(get_basename "${f}")" >> "${filename}"
+  done
+
+  # Set TRACKTOTAL tag if it's not set
   if [ -z "${infos[TRACKTOTAL]}" ]; then
     metaflac --set-tag=TRACKTOTAL="${#tracks[@]}" "${1}"/*.flac
   fi
-  mv "${1}" "${infos[DATE]} ${infos[ALBUM]}"
+
+  # Rename the tracks directory
+  mv "${1}" "$(format_from_template infos "${directory}")"
 }
 
 # exit_code
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  print_usage "DIRECTORY [FORMAT='%TRACKNUMBER - %TITLE']" >&2
+# directory, [template='%TRACKNUMBER - %TITLE'], [playlist='00 - %ALBUM'], [template_dir='%DATE %ALBUM']
+if [ $# -lt 1 ]; then
+  print_usage "[(-t --track) TRACK='%TRACKNUMBER - %TITLE'] [(-p --playlist) PLAYLIST='00 - %ALBUM'] [(-d --directory) DIRECTORY='%DATE %ALBUM'] ...TRACKS_DIRECTORIES" >&2
   exit 1
 fi
 
-if [ ! -d "${1}" ]; then
-  echo "DIRECTORY must be a directory" >&2
-  exit 1
-fi
-format_names "${1}" "${2}"
-exit
+declare -a directories
+declare -i code errno=0
+declare track playlist directory
+
+while [ $# -ne 0 ]; do
+  case "${1}" in
+    -t | --track)
+      track="${2}"
+      shift
+      ;;
+    -p | --playlist)
+      playlist="${2}"
+      shift
+      ;;
+    -d | --directory)
+      directory="${2}"
+      shift
+      ;;
+    *)
+      if [ -d "${1}" ]; then
+        directories+=("${1}")
+      else
+        echo "TRACKS_DIRECTORY '${1}' must be a directory" >&2
+      fi
+      ;;
+  esac
+  shift
+done
+
+for d in "${directories[@]}"; do
+  format_names "${d}" "${track}" "${playlist}" "${directory}"
+  code=$?
+  if [ "${code}" -ne 0 ]; then
+    errno="${code}"
+  fi
+done
+exit "${errno}"
+
