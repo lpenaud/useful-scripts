@@ -1,199 +1,81 @@
 # Add style to terminal
+# For more details see:
+# https://en.wikipedia.org/wiki/ANSI_escape_code
 
-function style::run () {
+#######################################
+# Write ANSI escape code for SGR and 3-4 bits colors.
+# SGR: Select Graphic Rendition
+# Arguments:
+#  ...color codes
+# Outputs:
+#  Write ANSI escape characters corresponding to given codes.
+#######################################
+function style::3_4_bits () {
   local attr="${1}"
   shift
   while [ $# -gt 0 ]; do
     attr+=";${1}"
     shift
   done
-  echo -en "\x1b[${attr}m"
+  printf "\x1b[%sm" "${attr}"
 }
 
-function style::reset () {
-  style::run 0
+#######################################
+# Write an error message.
+# Arguments:
+#   Error message
+# Outputs:
+#   Write "ERROR" following by the given error message.
+#######################################
+function style::error () {
+  style::3_4_bits 1 30 101
+  echo -n "ERROR"
+  style::3_4_bits 0 91
+  printf "\t  %s\n" "${1}"
+  style::3_4_bits 0
 }
 
-function style::bold () {
-  style::run 1
+#######################################
+# Write an warning message.
+# Arguments:
+#   Warning message
+# Outputs:
+#   Write "WARNING" following by the given warning message.
+#######################################
+function style::warning () {
+  style::3_4_bits 1 30 103
+  echo -n "WARNING"
+  style::3_4_bits 0 93
+  printf "\t  %s\n" "${1}"
+  style::3_4_bits 0
 }
 
-function style::reset_bold () {
-  style::run 22
+#######################################
+# Write an success message.
+# Arguments:
+#   Success message
+# Outputs:
+#   Write "SUCCESS" following by the given success message.
+#######################################
+function style::success () {
+  style::3_4_bits 1 30 102
+  echo -n "SUCCESS"
+  style::3_4_bits 0 92
+  printf "\t  %s\n" "${1}"
+  style::3_4_bits 0
 }
 
-function style::dim () {
-  style::run 2
-}
-
-function style::reset_dim () {
-  style::run 22
-}
-
-function style::italic () {
-  style::run 3
-}
-
-function style::reset_italic () {
-  style::run 23
-}
-
-function style::underline () {
-  style::run 4
-}
-
-function style::reset_underline () {
-  style::run 24
-}
-
-function style::reverse () {
-  style::run 7
-}
-
-function style::reset_reverse () {
-  style::run 27
-}
-
-function style::hidden () {
-  style::run 8
-}
-
-function style::reset_hidden () {
-  style::run 28
-}
-
-function style::strikethrough () {
-  style::run 9
-}
-
-function style::reset_strikethrough () {
-  style::run 29
-}
-
-function style::black () {
-  style::run 30
-}
-
-function style::red () {
-  style::run 31
-}
-
-function style::green () {
-  style::run 32
-}
-
-function style::yellow () {
-  style::run 33
-}
-
-function style::blue () {
-  style::run 34
-}
-
-function style::magenta () {
-  style::run 35
-}
-
-function style::cyan () {
-  style::run 36
-}
-
-function style::light_gray () {
-  style::run 37
-}
-
-function style::dark_gray () {
-  style::run 90
-}
-
-function style::light_red () {
-  style::run 91
-}
-
-function style::light_green () {
-  style::run 92
-}
-
-function style::light_blue () {
-  style::run 94
-}
-
-function style::light_magenta () {
-  style::run 95
-}
-
-function style::light_cyan () {
-  style::run 96
-}
-
-function style::white () {
-  style::run 97
-}
-
-function style::reset_color () {
-  style::run 39
-}
-
-function style::bg_black () {
-  style::run 40
-}
-
-function style::bg_red () {
-  style::run 41
-}
-
-function style::bg_green () {
-  style::run 42
-}
-
-function style::bg_yellow () {
-  style::run 43
-}
-
-function style::bg_blue () {
-  style::run 44
-}
-
-function style::bg_magenta () {
-  style::run 45
-}
-
-function style::bg_cyan () {
-  style::run 46
-}
-
-function style::bg_light_gray () {
-  style::run 47
-}
-
-function style::bg_dark_gray () {
-  style::run 100
-}
-
-function style::bg_light_red () {
-  style::run 101
-}
-
-function style::bg_light_green () {
-  style::run 102
-}
-
-function style::bg_light_blue () {
-  style::run 104
-}
-
-function style::bg_light_magenta () {
-  style::run 105
-}
-
-function style::bg_light_cyan () {
-  style::run 106
-}
-
-function style::bg_white () {
-  style::run 107
-}
-
-function style::reset_bg () {
-  style::run 49
+#######################################
+# Write an information message.
+# Arguments:
+#   Information message
+# Outputs:
+#   Write "INFO" following by the given information message.
+#######################################
+function style::info () {
+  style::3_4_bits 1 30 106
+  echo -n "INFO"
+  style::3_4_bits 0 96
+  printf "\t  %s\n" "${1}"
+  style::3_4_bits 0
 }

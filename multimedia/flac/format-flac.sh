@@ -1,8 +1,8 @@
 #!/bin/bash
 
-declare -r DIRNAME="${0%\/*}"
-. "${DIRNAME}/../../helpers/functions"
-. "${DIRNAME}/../../helpers/array"
+declare -r HELPERS_DIR="${0%\/*}/../../helpers"
+. "${HELPERS_DIR}/array"
+. "${HELPERS_DIR}/help"
 
 # metadata_dict, infile, ...tags_to_read
 function read_tags () {
@@ -52,33 +52,35 @@ function format_from_template () {
 
 # tracks_directory, [track='%TRACKNUMBER - %TITLE'], [playlist='00 - %ALBUM'], [directory='%DATE %ALBUM']
 function format_names () {
+  local -r track="${2:-%TRACKNUMBER - %TITLE}"
+  local -r directory="${4:-%DATE %ALBUM}"
+  local -r playlist="${3:-00 - %ALBUM}"
   local -A infos
   local -a tracks
-  local f filename template="${2:-%TRACKNUMBER - %TITLE}" playlist="${3:-00 - %ALBUM}" directory="${4:-%DATE %ALBUM}"
-  for f in "${1}"/*.flac; do
-    tracks+=("${f}")
-  done
-  if array::is_empty tracks; then
-    echo "Not flac files found" >&2
+  local f filename
+
+  # By default bash return the blob if there aren't any match
+  if [[ "${1}"/*.flac =~ \*\.flac$ ]]; then
+    style::error "Not flac files found in directory: '${1}'" >&2
     return 1
   fi
 
-  # Renames tracks
+  # Renames tracks from given template
   for f in "${tracks[@]}"; do
     read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL ARTIST DISCNUMBER
-    # printf can interpret TRACKNUMBER as an octal number
+    # printf can interpret TRACKNUMBER as an octal number if it's begin by 0
     if [[ "${infos[TRACKNUMBER]}" =~ ^0([0-9]+)$ ]]; then
       infos[TRACKNUMBER]="${BASH_REMATCH[1]}"
     fi
-    filename="$(format_from_template infos "${template}").flac"
+    filename="$(format_from_template infos "${track}").flac"
     mv "${f}" "${1}/${filename}"
   done
 
-  # Generate playlist
+  # Generate playlist from 
   rm -f "${1}"/*.m3u
   filename="${1}/$(format_from_template infos "${playlist}").m3u"
   for f in "${1}"/*.flac; do
-    echo "$(get_basename "${f}")" >> "${filename}"
+    echo "${f##*/}" >> "${filename}"
   done
 
   # Set TRACKTOTAL tag if it's not set
@@ -90,17 +92,29 @@ function format_names () {
   mv "${1}" "$(format_from_template infos "${directory}")"
 }
 
-# exit_code
-# directory, [template='%TRACKNUMBER - %TITLE'], [playlist='00 - %ALBUM'], [template_dir='%DATE %ALBUM']
+function _usage () {
+  help::usage "-t TRACK" "-p PLAYLIST" "-d DIRECTORY" "FLAC_DIRECTORY" "FLAC_DIRECTORY ..."
+}
+
+function _help () {
+  _usage
+  help::description "Format flac filesname."
+  help::positional_argument "FLAC_DIRECTORY" "Directory with flac file in it."
+  help::optional
+  help::optional_argument "-h" "--help" "show this help message and exit"
+  help::optional_argument "-t" "--track" "TRACK" "format of track filename" "%TRACKNUMBER - %TITLE"
+  help::optional_argument "-p" "--playlist" "PLAYLIST" "format of playlist filename" "00 - %ALBUM"
+  help::optional_argument "-d" "--directory" "DIRECTORY" "format of directory filename" "%DATE %ALBUM"
+}
+
 if [ $# -lt 1 ]; then
-  print_usage "[(-t --track) TRACK='%TRACKNUMBER - %TITLE'] [(-p --playlist) PLAYLIST='00 - %ALBUM'] [(-d --directory) DIRECTORY='%DATE %ALBUM'] ...TRACKS_DIRECTORIES" >&2
+  _usage >&2
   exit 1
 fi
 
 declare -a directories
 declare -i code errno=0
 declare track playlist directory
-
 while [ $# -ne 0 ]; do
   case "${1}" in
     -t | --track)
@@ -114,6 +128,10 @@ while [ $# -ne 0 ]; do
     -d | --directory)
       directory="${2}"
       shift
+      ;;
+    -h | --help)
+      _help
+      exit 0
       ;;
     *)
       if [ -d "${1}" ]; then
