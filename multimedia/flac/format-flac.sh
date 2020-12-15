@@ -106,9 +106,9 @@ function format_flac::help () {
   help::positional_argument "FLAC_DIRECTORY" "Directory with flac file on it."
   help::optional
   help::optional_help
-  help::optional_argument "-t" "--track" var="TRACK" desc="format of track filename" default="%TRACKNUMBER - %TITLE"
-  help::optional_argument "-p" "--playlist" var="PLAYLIST" desc="format of playlist filename" default="00 - %ALBUM"
-  help::optional_argument "-d" "--directory" var="DIRECTORY" desc="format of directory filename" default="%DATE %ALBUM"
+  help::optional_argument "-t" "--track" var="TRACK" desc="Format of track filename." default="%TRACKNUMBER - %TITLE"
+  help::optional_argument "-p" "--playlist" var="PLAYLIST" desc="Format of playlist filename." default="00 - %ALBUM"
+  help::optional_argument "-d" "--directory" var="DIRECTORY" desc="Format of directory filename." default="%DATE %ALBUM"
 }
 
 if [ $# -lt 1 ]; then
