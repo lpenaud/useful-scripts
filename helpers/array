@@ -37,3 +37,16 @@ function array::is_not_empty () {
 	fi
 	return 1
 }
+
+# array, value
+function array::find_key () {
+  local -n find_key=$1
+  local key
+  for key in "${!find_key[@]}"; do
+    if [ "${find_key[${key}]}" = "${2}" ]; then
+      echo "${key}"
+      return 0
+    fi
+  done
+  return 1
+}
