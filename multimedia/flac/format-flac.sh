@@ -2,6 +2,7 @@
 
 declare -r HELPERS_DIR="${0%\/*}/../../helpers"
 . "${HELPERS_DIR}/array"
+. "${HELPERS_DIR}/style"
 . "${HELPERS_DIR}/help"
 
 # metadata_dict, infile, ...tags_to_read
@@ -109,6 +110,7 @@ function _help () {
 
 if [ $# -lt 1 ]; then
   _usage >&2
+  style::error "The following arguments are required: FLAC_DIRECTORY" >&2
   exit 1
 fi
 
