@@ -41,18 +41,15 @@ function help::optional () {
 
 function help::optional_argument () {
   local -r -i max_len=48
-  local -i i start=0
+  local -i i match_len out_len
   local -a options
-  local var desc
+  local -A kwargs
+  local out match
   while [ $# -ne 0 ]; do
     if [[ "${1}" =~ ^- ]]; then
       options+=("${1}")
-    elif [[ "${1}" =~ ^[A-Z_]+$ ]]; then
-      var="${1}"
-    elif [ -z "${desc}" ]; then
-      desc="${1}"
-    else
-      printf -v desc "%s (default: %s)" "${desc}" "${1}"
+    elif [[ "${1}" =~ ^(var|desc|default)=(.*)$ ]]; then
+      kwargs["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
     fi
     shift
   done
@@ -62,9 +59,29 @@ function help::optional_argument () {
     printf ", %s" "${options[${i}]}"
     (( i++ ))
   done
-  printf " %s\n" "${var}"
-  while [ "${start}" -lt "${#desc}" ]; do
-    printf "\t\t%.${max_len}s\n" "${desc:${start}}"
-    (( start += max_len ))
+  printf " %s\n" "${kwargs[var]}"
+  if [ -n "${kwargs[default]}" ]; then
+    printf -v match "%s (default: %s)" "${kwargs[desc]}" "${kwargs[default]}"
+  else
+    match="${kwargs[desc]}"
+  fi
+  [[ "${match}" =~ ([^[:space:]]+)(.*)$ ]]
+  out="${BASH_REMATCH[1]}"
+  match="${BASH_REMATCH[2]}"
+  while [[ "${match}" =~ ([^[:space:]]+)(.*)$ ]]; do
+    match_len="${#BASH_REMATCH[1]}"
+    if (( match_len + out_len > max_len )); then
+      printf "\t\t%s\n" "${out}"
+      out="${BASH_REMATCH[1]}"
+    else
+      printf -v out "%s %s" "${out}" "${BASH_REMATCH[1]}"
+    fi
+    out_len="${#out}"
+    match="${BASH_REMATCH[2]}"
   done
+  printf "\t\t%s\n" "${out}"
+}
+
+function help::optional_help () {
+  help::optional_argument "-h" "--help" desc="Show this help message and exit."
 }

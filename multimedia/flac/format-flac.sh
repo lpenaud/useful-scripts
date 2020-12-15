@@ -49,7 +49,9 @@ function format_flac::format_from_template () {
     values+=("${metadata[${BASH_REMATCH[1]}]}")
     rematch="${BASH_REMATCH[2]}"
   done
-  printf "${result}" "${values[@]}"
+  printf -v result "${result}" "${values[@]}"
+  # Remove invalid chars (Unix / Windows)
+  echo "${result//[<>:\"\/\\|\?\*]/_}"
 }
 
 # tracks_directory, [track='%TRACKNUMBER - %TITLE'], [playlist='00 - %ALBUM'], [directory='%DATE %ALBUM']
@@ -101,12 +103,12 @@ function format_flac::usage () {
 function format_flac::help () {
   format_flac::usage
   help::description "Format flac filesname."
-  help::positional_argument "FLAC_DIRECTORY" "Directory with flac file in it."
+  help::positional_argument "FLAC_DIRECTORY" "Directory with flac file on it."
   help::optional
-  help::optional_argument "-h" "--help" "show this help message and exit"
-  help::optional_argument "-t" "--track" "TRACK" "format of track filename" "%TRACKNUMBER - %TITLE"
-  help::optional_argument "-p" "--playlist" "PLAYLIST" "format of playlist filename" "00 - %ALBUM"
-  help::optional_argument "-d" "--directory" "DIRECTORY" "format of directory filename" "%DATE %ALBUM"
+  help::optional_help
+  help::optional_argument "-t" "--track" var="TRACK" desc="format of track filename" default="%TRACKNUMBER - %TITLE"
+  help::optional_argument "-p" "--playlist" var="PLAYLIST" desc="format of playlist filename" default="00 - %ALBUM"
+  help::optional_argument "-d" "--directory" var="DIRECTORY" desc="format of directory filename" default="%DATE %ALBUM"
 }
 
 if [ $# -lt 1 ]; then
