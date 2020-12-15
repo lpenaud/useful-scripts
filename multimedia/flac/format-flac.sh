@@ -4,9 +4,10 @@ declare -r HELPERS_DIR="${0%\/*}/../../helpers"
 . "${HELPERS_DIR}/array"
 . "${HELPERS_DIR}/style"
 . "${HELPERS_DIR}/help"
+. "${HELPERS_DIR}/parallel"
 
 # metadata_dict, infile, ...tags_to_read
-function read_tags () {
+function format_flac::read_tags () {
   local -n metadata=$1
   local -r infile="${2}"
   local -a tags
@@ -24,7 +25,7 @@ function read_tags () {
 }
 
 # tag
-function get_tag_format () {
+function format_flac::get_tag_format () {
   case "${1}" in
     TRACKNUMBER)
       echo -n "%02d"
@@ -39,12 +40,12 @@ function get_tag_format () {
 }
 
 # metadata_dict, template
-function format_from_template () {
+function format_flac::format_from_template () {
   local -n metadata=$1
   local -a values
   local rematch="${2}" result="${2%%\%*}"
   while [[ "${rematch}" =~ %([A-Z]+)(.*)$ ]]; do
-    result+="$(get_tag_format "${BASH_REMATCH[1]}")${BASH_REMATCH[2]%%\%*}"
+    result+="$(format_flac::get_tag_format "${BASH_REMATCH[1]}")${BASH_REMATCH[2]%%\%*}"
     values+=("${metadata[${BASH_REMATCH[1]}]}")
     rematch="${BASH_REMATCH[2]}"
   done
@@ -68,18 +69,18 @@ function format_names () {
 
   # Renames tracks from given template
   for f in "${tracks[@]}"; do
-    read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL ARTIST DISCNUMBER
+    format_flac::read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL ARTIST DISCNUMBER
     # printf can interpret TRACKNUMBER as an octal number if it's begin by 0
     if [[ "${infos[TRACKNUMBER]}" =~ ^0([0-9]+)$ ]]; then
       infos[TRACKNUMBER]="${BASH_REMATCH[1]}"
     fi
-    filename="$(format_from_template infos "${track}").flac"
+    filename="$(format_flac::format_from_template infos "${track}").flac"
     mv "${f}" "${1}/${filename}"
   done
 
   # Generate playlist from 
   rm -f "${1}"/*.m3u
-  filename="${1}/$(format_from_template infos "${playlist}").m3u"
+  filename="${1}/$(format_flac::format_from_template infos "${playlist}").m3u"
   for f in "${1}"/*.flac; do
     echo "${f##*/}" >> "${filename}"
   done
@@ -90,15 +91,15 @@ function format_names () {
   fi
 
   # Rename the tracks directory
-  mv "${1}" "$(format_from_template infos "${directory}")"
+  mv "${1}" "$(format_flac::format_from_template infos "${directory}")"
 }
 
-function _usage () {
+function format_flac::usage () {
   help::usage "-t TRACK" "-p PLAYLIST" "-d DIRECTORY" "FLAC_DIRECTORY" "FLAC_DIRECTORY ..."
 }
 
-function _help () {
-  _usage
+function format_flac::help () {
+  format_flac::usage
   help::description "Format flac filesname."
   help::positional_argument "FLAC_DIRECTORY" "Directory with flac file in it."
   help::optional
@@ -109,12 +110,12 @@ function _help () {
 }
 
 if [ $# -lt 1 ]; then
-  _usage >&2
+  format_flac::usage >&2
   style::error "The following arguments are required: FLAC_DIRECTORY" >&2
   exit 1
 fi
 
-declare -a directories
+declare -a directories cmd
 declare -i code errno=0
 declare track playlist directory
 while [ $# -ne 0 ]; do
@@ -132,7 +133,7 @@ while [ $# -ne 0 ]; do
       shift
       ;;
     -h | --help)
-      _help
+      format_flac::help
       exit 0
       ;;
     *)
@@ -146,12 +147,13 @@ while [ $# -ne 0 ]; do
   shift
 done
 
+parallel::init
+cmd[0]="format_names"
 for d in "${directories[@]}"; do
-  format_names "${d}" "${track}" "${playlist}" "${directory}"
-  code=$?
-  if [ "${code}" -ne 0 ]; then
-    errno="${code}"
-  fi
+  cmd[1]="${d}"
+  cmd[2]="${track}"
+  cmd[3]="${playlist}"
+  cmd[4]="${directory}"
+  parallel::run cmd
 done
-exit "${errno}"
-
+wait
