@@ -11,9 +11,10 @@ function format_flac::read_tags () {
   local -n metadata=$1
   local -r infile="${2}"
   local -a tags
-  local -i i
+  local -i i=0
   local line tag key
   shift 2
+  array::clean metadata
   while [ $# -ne 0 ]; do
     tags+=("--show-tag=${1}")
     shift
@@ -61,9 +62,10 @@ function format_flac::format_from_template () {
   local rematch="${2}" result="${2%%\%*}"
   while [[ "${rematch}" =~ %([A-Z]+)(.*)$ ]]; do
     if [ "${BASH_REMATCH[1]}" = "ARTISTS" ]; then
-      i=0
+      i=1
       result+="$(format_flac::get_tag_format ARTIST)"
       values+=("${metadata[ARTIST${i}]}")
+      (( i++ ))
       while [ -n "${metadata[ARTIST${i}]}" ]; do
         result+=", $(format_flac::get_tag_format ARTIST)"
         values+=("${metadata[ARTIST${i}]}")
@@ -76,9 +78,9 @@ function format_flac::format_from_template () {
     result+="${BASH_REMATCH[2]%%\%*}"
     rematch="${BASH_REMATCH[2]}"
   done
-  printf -v result "${result}" "${values[@]}"
   # Remove invalid chars (Unix / Windows)
-  echo "${result//[<>:\"\/\\|\?\*]/_}"
+  # FIX: If quotes are not omitted, they are duplicated.
+  printf "${result}" "${values[@]//[<>:\"\/\\|\?\*\']/_}"
 }
 
 # tracks_directory,
@@ -86,23 +88,23 @@ function format_flac::format_from_template () {
 # [playlist='00 - %ALBUM'],
 # [directory='%DATE %ALBUM']
 # [featuring='%TRACKNUMBER - %TITLE (feat. %ARTISTS)']
-function format_names () {
+function format_flac::format_names () {
   local -r track="${2:-%TRACKNUMBER - %TITLE}"
   local -r playlist="${3:-00 - %ALBUM}"
   local -r directory="${4:-%DATE %ALBUM}"
   local -r featuring="${5:-%TRACKNUMBER - %TITLE (feat. %ARTISTS)}"
-  local -A infos
-  local -a tracks
+  local -A infos tracks
   local f filename
 
   # By default bash return the blob if there aren't any match
-  if [[ "${1}"/*.flac =~ \*\.flac$ ]]; then
+  # FIX: Why do I have an echo?
+  if [[ "$(echo "${1}"/*.flac)" =~ \*\.flac$ ]]; then
     style::error "Not flac files found in directory: '${1}'" >&2
     return 1
   fi
 
   # Renames tracks from given template
-  for f in "${tracks[@]}"; do
+  for f in "${1}"/*.flac; do
     format_flac::read_tags infos "${f}" TRACKNUMBER TITLE ALBUM DATE TRACKTOTAL ARTIST DISCNUMBER
     # printf can interpret TRACKNUMBER as an octal number if it's begin by 0
     if [[ "${infos[TRACKNUMBER]}" =~ ^0([0-9]+)$ ]]; then
@@ -113,27 +115,23 @@ function format_names () {
     else
       filename="$(format_flac::format_from_template infos "${track}").flac"
     fi
+    tracks["${infos[TRACKNUMBER]}"]="${filename}"
     mv "${f}" "${1}/${filename}"
   done
 
-  # Generate playlist from 
+  # Generate playlist in order
   rm -f "${1}"/*.m3u
   filename="${1}/$(format_flac::format_from_template infos "${playlist}").m3u"
-  for f in "${1}"/*.flac; do
-    echo "${f##*/}" >> "${filename}"
+  for f in "${tracks[@]}"; do
+    echo "${f}" >> "${filename}"
   done
-
-  # Set TRACKTOTAL tag if it's not set
-  if [ -z "${infos[TRACKTOTAL]}" ]; then
-    metaflac --set-tag=TRACKTOTAL="${#tracks[@]}" "${1}"/*.flac
-  fi
 
   # Rename the tracks directory
   mv "${1}" "$(format_flac::format_from_template infos "${directory}")"
 }
 
 function format_flac::usage () {
-  help::usage "-t TRACK" "-p PLAYLIST" "-d DIRECTORY" "FLAC_DIRECTORY" "FLAC_DIRECTORY ..."
+  help::usage "-t TRACK" "-p PLAYLIST" "-d DIRECTORY" "-f FEATURING" "FLAC_DIRECTORY" "FLAC_DIRECTORY ..."
 }
 
 function format_flac::help () {
@@ -190,7 +188,7 @@ while [ $# -ne 0 ]; do
 done
 
 parallel::init
-cmd[0]="format_names"
+cmd[0]="format_flac::format_names"
 for d in "${directories[@]}"; do
   cmd[1]="${d}"
   cmd[2]="${track}"
@@ -198,5 +196,6 @@ for d in "${directories[@]}"; do
   cmd[4]="${directory}"
   cmd[5]="${featuring}"
   parallel::run cmd
+  #format_flac::format_names "${d}" "${track}" "${playlist}" "${directory}" "${featuring}"
 done
 wait

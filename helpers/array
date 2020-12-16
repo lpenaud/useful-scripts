@@ -50,3 +50,12 @@ function array::find_key () {
   done
   return 1
 }
+
+function array::clean () {
+  local -n clean=$1
+  local key
+  for key in "${!clean[@]}"; do
+    unset clean["${key}"]
+  done
+}
+
