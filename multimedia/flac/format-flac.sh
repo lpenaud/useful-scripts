@@ -149,12 +149,6 @@ function format_flac::help () {
   help::optional_argument "-f" "--featuring" var="FEATURING" desc="the format of the track, if the track has more than one artist" default="%TRACKNUMBER - %TITLE (feat. %ARTISTS)"
 }
 
-if [ $# -lt 1 ]; then
-  format_flac::usage >&2
-  style::error "The following arguments are required: FLAC_DIRECTORY" >&2
-  exit 1
-fi
-
 declare -a directories cmd
 declare -i code errno=0
 declare track playlist directory featuring
@@ -189,6 +183,12 @@ while [ $# -ne 0 ]; do
   esac
   shift
 done
+
+if array::is_empty directories; then
+  format_flac::usage >&2
+  style::error "The following arguments are required: FLAC_DIRECTORY" >&2
+  exit 1
+fi
 
 parallel::init
 cmd[0]="format_flac::format_names"

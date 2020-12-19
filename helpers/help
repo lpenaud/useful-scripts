@@ -4,22 +4,26 @@ function help::usage () {
   local out
   printf -v out "Usage: %s [-h]" "${0}"
   while [ $# -ne 0 ]; do
+    if [ "${#out}" -ge "${max_len}" ]; then
+      printf "%s\n  " "${out}"
+      out=""
+    fi
     if [[ "${1}" =~ ^- ]] || [[ "${1}" =~ \.\.\.$ ]]; then
       printf -v out "%s [%s]" "${out}" "${1}"
     else
       printf -v out "%s %s" "${out}" "${1}"
     fi
     shift
-    if [ "${#out}" -ge "${max_len}" ]; then
-      printf "%s\n  " "${out}"
-      out=""
-    fi
   done
   echo "${out}"
 }
 
 function help::description () {
-  printf "\n%s\n" "${1}"
+  echo ""
+  while [ $# -ne 0 ]; do
+    printf "%s\n" "${1}"
+    shift
+  done
 }
 
 function help::positional_argument () {
