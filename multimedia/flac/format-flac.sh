@@ -80,7 +80,10 @@ function format_flac::format_from_template () {
   done
   # Remove invalid chars (Unix / Windows)
   # FIX: If quotes are not omitted, they are duplicated.
-  printf "${result}" "${values[@]//[<>:\"\/\\|\?\*\']/_}"
+  printf -v result "${result}" "${values[@]//[<>:\"\/\\|\?\*\']/_}"
+
+  # Limit the result to 125 characters (half of the maximum char limit for filename)
+  echo "${result:0:125}"
 }
 
 # tracks_directory,
