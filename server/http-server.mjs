@@ -226,7 +226,6 @@ async function main(args) {
     .on('request', (req, res) => {
       const timestamp = Date.now()
       res.on('close', () => {
-        console.error(arguments)
         console.log('%d %s %s - %d ms',
           res.statusCode,
           req.method,
