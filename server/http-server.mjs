@@ -44,21 +44,40 @@ const USELESS_FUNCTION = () => undefined
  * @see {@link prepareHeader}
  */
 
-/**
- * Calculate the asked range in headers of a HTTP request.
- * @param {fs.Stats} stat - File stats.
- * @param {http.ClientRequest} req - HTTP request.
- * @returns {Range} Asking range.
- */
-function getRangeHeader(stat, req) {
-  const matchs = /^bytes=([0-9]+)\-([0-9]+)?$/.exec(req.headers.range)
-  const range = matchs === null
-    ? { start: 0, end: stat.size - 1 }
-    : { start: parseInt(matchs[1]), end: parseInt(matchs[2]) || stat.size - 1 }
-  range.size = stat.size - range.start
-  range.length = (range.end - range.start) + 1
-  range.unit = 'bytes'
-  return range
+class HTTPRange {
+  start
+  end
+  size
+  length
+
+  get unit() {
+    return 'bytes'
+  }
+
+  get contentRange() {
+    return `${this.unit} ${this.start}-${this.end}/${this.size}`
+  }
+
+  constructor(stat, req) {
+    const matchs = /^bytes=([0-9]+)\-([0-9]+)?$/
+      .exec(req.headers.range)
+    if (matchs === null) {
+      this.start = 0
+      this.end = stat.size - 1
+    } else {
+      this.start = parseInt(matchs[1])
+      this.end = parseInt(matchs[2]) || stat.size - 1 
+    }
+    this.size = stat.size - this.start
+    this.length = (this.end - this.start) + 1
+  }
+
+  setHeader(res) {
+    res.setHeader('Content-Range', this.contentRange)
+    res.setHeader('Accept-Range', this.unit)
+    res.statusCode = 206
+  }
+
 }
 
 /**
@@ -77,25 +96,25 @@ async function prepareHeader(req, res, options = {}) {
   }
   const pathname = path.join(".", decodeURIComponent(req.url))
   const stat = await fs.stat(pathname)
-  const range = getRangeHeader(stat, req);
+  const range = new HTTPRange(stat, req)
   if (stat.isFile()) {
     if (range.size < 0 || range.end === 0) {
       res.writeHead(416)
       res.end()
       return
     }
-    res.writeHead(range.size !== stat.size ? 206 : 200, {
-      'Content-Type': 'application/octet-stream',
-      'Content-Range': `${range.unit} ${range.start}-${range.end}/${stat.size}`,
-      'Accept-Range': range.unit,
-      'Content-Length': range.length,
-    })
+    res.setHeader('Content-Type', 'applications/octet-stream')
+    res.setHeader('Content-Length', range.length)
+    if (range.size !== stat.size) {
+      range.setHeader(res)
+    } else {
+      res.statusCode = 200
+    }
     await options.onFile(res, { pathname, range })
   } else if (stat.isDirectory()) {
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'text/html')
     await options.onDirectory(res, { pathname, range })
-    res.writeHead(200, {
-      'Content-Type': 'text/html'
-    })
   }
   res.end()
 }
@@ -204,10 +223,19 @@ async function main(args) {
     },
   }
   http.createServer()
-    .on("request", (req, res) => {
-      req.timestamp = Date.now()
+    .on('request', (req, res) => {
+      const timestamp = Date.now()
+      res.on('close', () => {
+        console.error(arguments)
+        console.log('%d %s %s - %d ms',
+          res.statusCode,
+          req.method,
+          decodeURIComponent(req.url),
+          Date.now() - timestamp,
+        )
+      })
     })
-    .on("request", (req, res) => {
+    .on('request', (req, res) => {
       const handler = handlers[req.method]
       if (handler === undefined) {
         res.writeHead(501)
@@ -219,9 +247,6 @@ async function main(args) {
           res.end()
         })
       }
-    })
-    .on("request", (req, res) => {
-        console.log(`${res.statusCode} ${req.method} ${decodeURIComponent(req.url)} - ${Date.now() - req.timestamp} ms`)
     })
     .on('error', console.error)
     .listen(port, address, () => {
