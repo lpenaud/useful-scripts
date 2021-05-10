@@ -4,24 +4,14 @@ import { createReadStream } from 'fs'
 import fs from 'fs/promises'
 import { pipeline } from 'stream/promises'
 import path from 'path'
-import util from 'util'
+import { USELESS_FUNCTION } from "../helpers/node/util.mjs";
+import HttpServer from '../helpers/node/http/http-server.mjs'
+import HttpRange from "../helpers/node/http/http-range.mjs";
+import HttpLogger from "../helpers/node/http/http-logger.mjs";
 
-/**
- * Function that serves no purpose except to be called.
- * Useful for optional callback.
- * @returns {void}
- */
-const USELESS_FUNCTION = () => undefined
+const STAT_FILTER = st => st.isDirectory() || st.isFile()
 
-/**
- * @typedef Range
- * @property {number} start - Positive integer.
- * @property {number} end - Positive integer.
- * @property {number} size - Integer can be negative.
- * @property {number} length - Length of the range.
- * @property {"bytes"} unit - Range unit.
- * @see {@link getRangeHeader}
- */
+const LOGGER = new HttpLogger()
 
 /**
  * @typedef HeaderInfo
@@ -44,40 +34,13 @@ const USELESS_FUNCTION = () => undefined
  * @see {@link prepareHeader}
  */
 
-class HTTPRange {
-  start
-  end
-  size
-  length
-
-  get unit() {
-    return 'bytes'
+ async function tryStat(pathname) {
+  try {
+    const stat = await fs.stat(pathname)
+    return STAT_FILTER(stat) ? stat : null
+  } catch (error) {
+    return null
   }
-
-  get contentRange() {
-    return `${this.unit} ${this.start}-${this.end}/${this.size}`
-  }
-
-  constructor(stat, req) {
-    const matchs = /^bytes=([0-9]+)\-([0-9]+)?$/
-      .exec(req.headers.range)
-    if (matchs === null) {
-      this.start = 0
-      this.end = stat.size - 1
-    } else {
-      this.start = parseInt(matchs[1])
-      this.end = parseInt(matchs[2]) || stat.size - 1 
-    }
-    this.size = stat.size - this.start
-    this.length = (this.end - this.start) + 1
-  }
-
-  setHeader(res) {
-    res.setHeader('Content-Range', this.contentRange)
-    res.setHeader('Accept-Range', this.unit)
-    res.statusCode = 206
-  }
-
 }
 
 /**
@@ -94,9 +57,15 @@ async function prepareHeader(req, res, options = {}) {
     onDirectory: USELESS_FUNCTION,
     ...options,
   }
-  const pathname = path.join(".", decodeURIComponent(req.url))
-  const stat = await fs.stat(pathname)
-  const range = new HTTPRange(stat, req)
+  const pathname = path.join('.', decodeURIComponent(req.url))
+  const stat = await tryStat(pathname)
+  if (stat === null) {
+    res.writeHead(404)
+    res.end()
+    return
+  }
+  const range = new HttpRange(stat, req)
+  let callback
   if (stat.isFile()) {
     if (range.size < 0 || range.end === 0) {
       res.writeHead(416)
@@ -110,13 +79,18 @@ async function prepareHeader(req, res, options = {}) {
     } else {
       res.statusCode = 200
     }
-    await options.onFile(res, { pathname, range })
+    callback = options.onFile
   } else if (stat.isDirectory()) {
     res.statusCode = 200
     res.setHeader('Content-Type', 'text/html')
-    await options.onDirectory(res, { pathname, range })
+    callback = options.onDirectory
   }
-  res.end()
+  LOGGER.log(req, res)
+  try {
+    await callback(res, { pathname, range })
+  } finally {
+    res.end()
+  }
 }
 
 /**
@@ -125,7 +99,10 @@ async function prepareHeader(req, res, options = {}) {
  * @param {HeaderInfo} info - Information about the requested file.
  */
 async function getFile(res, info) {
-  const readStream = createReadStream(info.pathname, info.range)
+  const readStream = createReadStream(info.pathname, {
+    start: info.range.start,
+    end: info.range.end,
+  })
   try {
     await pipeline(readStream, res)
   } finally {
@@ -140,43 +117,53 @@ async function getFile(res, info) {
  */
 async function getDirectory(res, info) {
   const parsed = path.parse(info.pathname)
-  const files = (await fs.readdir(info.pathname, { withFileTypes: true }))
-    .filter(f => f.isDirectory() || f.isFile())
+  const files = []
+  console.log(info.pathname, parsed)
+  if (parsed.base === '.') {
+    parsed.base = '/'
+  } else {
+    files.push(`<li><a href="/${parsed.dir}">..</a></li>`)
+  }
+  files.push(...(await fs.readdir(info.pathname, { withFileTypes: true }))
+    .filter(STAT_FILTER)
+    .sort((f1, f2) => f1.name.localeCompare(f2.name))
+    .map(f => `
+<li>
+  <a href="/${path.join(info.pathname, f.name)}">${f.name + (f.isDirectory() ? '/' : '')}</a>
+</li>`)
+  )
+  const title = `Directory listing for ${parsed.base}`
   await new Promise((resolve) => {
-    res.write(util.format(
-      '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><title>%s</title></head><body><h1>%s</h1><ul><li><a href=\"%s\">..</a></li>%s</ul></body>',
-      parsed.name,
-      parsed.name,
-      parsed.dir,
-      files.reduce((acc, f) => acc + `<li><a href="${path.join(info.pathname, f.name)}">${f.name}</a></li>`, ""),
-    ), resolve)
+    res.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+<head>
+<body>
+  <h1>${title}</h1>
+  <hr>
+  <ul>${files.join('')}</ul>
+  <hr>
+</body>
+<h1>`, resolve)
   })
 }
 
-function prodString(str, times) {
-  let result = ""
-  while (times-- > 0) {
-    result += str
-  }
-  return result
-}
-
 function usage(printer, code) {
+  const httpOptions = HttpServer.listenOptions()
   const prgm = path.basename(process.argv[1])
-  const spaces = prodString(' ', prgm.length)
-  const formatter = (...args) => printer('  %s %s', ...args)
+  const formatter = arg => printer('  %s %s', prgm, arg)
   printer('Usage:')
-  formatter(prgm, '[(-b --bind) ADRESS=0.0.0.0]')
-  formatter(prgm, '[(-p --port) PORT=3000]')
-  formatter(prgm, '(-h --help)')
+  formatter(`[(-H --host) HOST=${httpOptions.host}]`)
+  formatter(`[(-p --port) PORT=${httpOptions.port}]`)
+  formatter('(-h --help)')
   process.exit(code)
 }
 
 function readArgs(args) {
-  const config = {
-    port: 3000,
-    address: '0.0.0.0',
-  }
+  const config = {}
   let hasError = false
   let arg
   while (args.length > 0) {
@@ -184,15 +171,15 @@ function readArgs(args) {
       case '--port':
       case '-p':
         config.port = parseInt(args.shift())
-        if (config.port === NaN || config.port < 0 || config.port > 65536) {
+        if (config.port === NaN || config.port < 0 || config.port >= 65536) {
           console.error('PORT should be >= 0 and < 65536')
           hasError = true
         }
         break
 
-      case '--bind':
-      case '-b':
-        config.adress = args.shift()
+      case '--host':
+      case '-H':
+        config.host = args.shift()
         break
 
       case '-h':
@@ -213,47 +200,17 @@ function readArgs(args) {
 }
 
 async function main(args) {
-  const { port, address } = readArgs(args)
-  const handlers = {
-    HEAD(req, res) {
-      return prepareHeader(req, res)
-    },
-    GET(req, res) {
-      return prepareHeader(req, res, { onFile: getFile, onDirectory: getDirectory })
-    },
+  const defaultOptions = {
+    onFile: getFile,
+    onDirectory: getDirectory,
   }
-  http.createServer()
-    .on('request', (req, res) => {
-      const timestamp = Date.now()
-      res.on('close', () => {
-        console.log('%d %s %s - %d ms',
-          res.statusCode,
-          req.method,
-          decodeURIComponent(req.url),
-          Date.now() - timestamp,
-        )
-      })
-    })
-    .on('request', (req, res) => {
-      const handler = handlers[req.method]
-      if (handler === undefined) {
-        res.writeHead(501)
-        res.end()
-      } else {
-        handler(req, res).catch(error => {
-          console.error(error)
-          res.writeHead(404)
-          res.end()
-        })
-      }
-    })
-    .on('error', console.error)
-    .listen(port, address, () => {
-      console.log('Web server listening on http://%s:%d', address, port)
-    })
+  const server = new HttpServer()
+  server.head((req, res) => prepareHeader(req, res))
+    .get((req, res) => prepareHeader(req, res, defaultOptions))
+  await server.listen(readArgs(args))
 }
 
 // Test if it's this file which is directly call
 if (fileURLToPath(import.meta.url).startsWith(process.argv[1])) {
-  await main(process.argv.slice(2))
+  main(process.argv.slice(2))
 }
