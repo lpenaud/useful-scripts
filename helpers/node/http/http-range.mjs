@@ -17,18 +17,23 @@ export default class HttpRange {
       .exec(req.headers.range)
     if (matchs === null) {
       this.start = 0
-      this.end = stat.size - 1
+      this.end = stat.size
     } else {
       this.start = parseInt(matchs[1])
-      this.end = parseInt(matchs[2]) || stat.size - 1
+      this.end = parseInt(matchs[2]) || stat.size
     }
-    this.size = stat.size - this.start
-    this.length = (this.end - this.start) + 1
+    this.size = stat.size
+    this.length = (this.end - this.start)
   }
 
   setHeader(res) {
-    res.setHeader('Content-Range', this.contentRange)
-    res.setHeader('Accept-Range', this.unit)
-    res.statusCode = 206
+    res.setHeader('Content-Length', this.length)
+    if (this.size !== this.length) {
+      res.setHeader('Content-Range', this.contentRange)
+      res.setHeader('Accept-Range', this.unit)
+      res.statusCode = 206
+    } else {
+      res.statusCode = 200
+    }
   }
 }

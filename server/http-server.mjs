@@ -4,14 +4,11 @@ import { createReadStream } from 'fs'
 import fs from 'fs/promises'
 import { pipeline } from 'stream/promises'
 import path from 'path'
-import { USELESS_FUNCTION } from "../helpers/node/util.mjs";
 import HttpServer from '../helpers/node/http/http-server.mjs'
 import HttpRange from "../helpers/node/http/http-range.mjs";
 import HttpLogger from "../helpers/node/http/http-logger.mjs";
 
 const STAT_FILTER = st => st.isDirectory() || st.isFile()
-
-const LOGGER = new HttpLogger()
 
 /**
  * @typedef HeaderInfo
@@ -34,7 +31,7 @@ const LOGGER = new HttpLogger()
  * @see {@link prepareHeader}
  */
 
- async function tryStat(pathname) {
+async function tryStat(pathname) {
   try {
     const stat = await fs.stat(pathname)
     return STAT_FILTER(stat) ? stat : null
@@ -43,98 +40,63 @@ const LOGGER = new HttpLogger()
   }
 }
 
-/**
- * 
- * @param {http.ClientRequest} req - HTTP client request.
- * @param {http.ServerResponse} res - HTTP server reponse.
- * @param {PrepareHeaderOptions} options - Provider of callbacks.
- * @param {options.onFile} [options.onFile=USELESS_FUNCTION] - By default do nothing.
- * @param {options.onDirectory} [options.onDirectory=USELESS_FUNCTION] - By default do nothing.
- */
-async function prepareHeader(req, res, options = {}) {
-  options = {
-    onFile: USELESS_FUNCTION,
-    onDirectory: USELESS_FUNCTION,
-    ...options,
-  }
-  const pathname = path.join('.', decodeURIComponent(req.url))
-  const stat = await tryStat(pathname)
-  if (stat === null) {
-    res.writeHead(404)
-    res.end()
-    return
-  }
-  const range = new HttpRange(stat, req)
-  let callback
-  if (stat.isFile()) {
-    if (range.size < 0 || range.end === 0) {
+class FileHandler {
+  range
+  pathname
+
+  prepare(req, res, info) {
+    this.range = new HttpRange(info.stat, req)
+    this.pathname = info.pathname
+    if (this.range.size < 0 || this.range.end === 0) {
       res.writeHead(416)
       res.end()
       return
     }
+    this.range.setHeader(res)
     res.setHeader('Content-Type', 'applications/octet-stream')
-    res.setHeader('Content-Length', range.length)
-    if (range.size !== stat.size) {
-      range.setHeader(res)
-    } else {
-      res.statusCode = 200
+  }
+
+  async send(req, res) {
+    const readStream = createReadStream(this.pathname, {
+      start: this.range.start,
+      end: this.range.end,
+    })
+    try {
+      await pipeline(readStream, res)
+    } finally {
+      readStream.destroy()
     }
-    callback = options.onFile
-  } else if (stat.isDirectory()) {
+  }
+}
+
+class DirectoryHandler {
+  pathname
+
+  prepare(req, res, info) {
+    this.pathname = info.pathname
     res.statusCode = 200
     res.setHeader('Content-Type', 'text/html')
-    callback = options.onDirectory
   }
-  LOGGER.log(req, res)
-  try {
-    await callback(res, { pathname, range })
-  } finally {
-    res.end()
-  }
-}
 
-/**
- * Can send totally or partially a regular file through a HTTP response.
- * @param {http.ServerResponse} res - HTTP server response. 
- * @param {HeaderInfo} info - Information about the requested file.
- */
-async function getFile(res, info) {
-  const readStream = createReadStream(info.pathname, {
-    start: info.range.start,
-    end: info.range.end,
-  })
-  try {
-    await pipeline(readStream, res)
-  } finally {
-    readStream.destroy()
-  }
-}
-
-/**
- * Send a HTML page with links to all regulars files and directories through a HTTP reponse.
- * @param {http.ServerResponse} res - HTTP server reponse.
- * @param {HeaderInfo} info - Information about the requested directory.
- */
-async function getDirectory(res, info) {
-  const parsed = path.parse(info.pathname)
-  const files = []
-  console.log(info.pathname, parsed)
-  if (parsed.base === '.') {
-    parsed.base = '/'
-  } else {
-    files.push(`<li><a href="/${parsed.dir}">..</a></li>`)
-  }
-  files.push(...(await fs.readdir(info.pathname, { withFileTypes: true }))
-    .filter(STAT_FILTER)
-    .sort((f1, f2) => f1.name.localeCompare(f2.name))
-    .map(f => `
+  async send(req, res) {
+    const parsed = path.parse(this.pathname)
+    const files = []
+    if (parsed.base === '.') {
+      parsed.base = '/'
+    } else {
+      files.push(`<li><a href="/${parsed.dir}">..</a></li>`)
+    }
+    files.push(...(await fs.readdir(this.pathname, { withFileTypes: true }))
+      .filter(STAT_FILTER)
+      .sort((f1, f2) => f1.name.localeCompare(f2.name))
+      .map(f => `
 <li>
-  <a href="/${path.join(info.pathname, f.name)}">${f.name + (f.isDirectory() ? '/' : '')}</a>
+  <a href="/${path.join(this.pathname, f.name)}">${f.name + (f.isDirectory() ? '/' : '')}</a>
 </li>`)
-  )
-  const title = `Directory listing for ${parsed.base}`
-  await new Promise((resolve) => {
-    res.write(`
+    )
+    const title = `Directory listing for ${parsed.base}`
+    await new Promise((resolve) => {
+      res.write(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -148,7 +110,37 @@ async function getDirectory(res, info) {
   <hr>
 </body>
 <h1>`, resolve)
-  })
+    })
+  }
+}
+
+class NotFoundHandler {
+  prepare(req, res, info) {
+    res.writeHead(404)
+  }
+
+  send(req, res) {
+    return Promise.resolve()
+  }
+}
+
+/**
+ * 
+ * @param {http.ClientRequest} req - HTTP client request.
+ * @param {http.ServerResponse} res - HTTP server reponse.
+ * @param {PrepareHeaderOptions} options - Provider of callbacks.
+ * @param {options.onFile} [options.onFile=USELESS_FUNCTION] - By default do nothing.
+ * @param {options.onDirectory} [options.onDirectory=USELESS_FUNCTION] - By default do nothing.
+ */
+async function handlerFactory(req, res, options = {}) {
+  const pathname = path.join('.', decodeURIComponent(req.url))
+  const stat = await tryStat(pathname)
+  const handler = stat === null ? new NotFoundHandler()
+    : stat.isDirectory() ? new DirectoryHandler()
+    : stat.isFile() ? new FileHandler() 
+    : new NotFoundHandler()
+  handler.prepare(req, res, { pathname, stat })
+  return handler
 }
 
 function usage(printer, code) {
@@ -200,13 +192,14 @@ function readArgs(args) {
 }
 
 async function main(args) {
-  const defaultOptions = {
-    onFile: getFile,
-    onDirectory: getDirectory,
-  }
+  const handlerSymbol = Symbol()
   const server = new HttpServer()
-  server.head((req, res) => prepareHeader(req, res))
-    .get((req, res) => prepareHeader(req, res, defaultOptions))
+  const logger = new HttpLogger()
+  server.on(async (req, res) => {
+    req[handlerSymbol] = await handlerFactory(req, res)
+  })
+  .on(logger.log)
+  .get((req, res) => req[handlerSymbol].send(req, res))
   await server.listen(readArgs(args))
 }
 

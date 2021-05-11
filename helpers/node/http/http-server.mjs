@@ -1,5 +1,5 @@
 import * as http from 'http'
-import { toCamelCase } from "../util.mjs";
+import { toCamelCase, defaultValues } from "../util.mjs";
 
 export default class HttpServer {
   static NOT_ALLOWED_METHOD = (req, res) => {
@@ -7,37 +7,34 @@ export default class HttpServer {
     res.end()
   }
 
-  static listenOptions(options = {}) {
-    return {
+  static listenOptions(options) {
+    return defaultValues({
       host: '0.0.0.0',
       port: 3000,
-      ...options,
-    }
+    }, options)
   }
 
   handlers
   server
+  methods
 
   constructor(options = {}) {
-    const methods = new Set(Array.isArray(options.methods) ? options.methods : undefined)
-      .add('HEAD').add('GET')
     this.handlers = {}
-    const notAllowedMethods = http.METHODS.filter(m => !methods.has(m))
-    for (const method of notAllowedMethods) {
-      this.handlers[method] = [HttpServer.NOT_ALLOWED_METHOD]
-    }
-    for (const method of methods) {
-      this.handlers[method] = []
+    this.methods = new Set(options.methods || [])
+      .add('GET').add('HEAD')
+    http.METHODS.filter(m => !this.methods.has(m))
+      .forEach(m => this.handlers[m] = [HttpServer.NOT_ALLOWED_METHOD])
+    for (const method of this.methods) {
       this[toCamelCase(method)] = this._addHandler.bind(this, method)
+      this.handlers[method] = []
     }
-    this.server = http.createServer(this._requestHandler.bind(this))
+    this.server = http.createServer(options.server, this._requestHandler.bind(this))
   }
 
   listen(options) {
-    options = HttpServer.listenOptions(options)
     return new Promise((resolve, reject) => {
       this.server.prependOnceListener('error', reject)
-      this.server.listen(options, () => {
+      this.server.listen(HttpServer.listenOptions(options), () => {
         console.log('Web server listening on http://%s:%d',
           options.host,
           options.port,
@@ -48,6 +45,18 @@ export default class HttpServer {
     })
   }
 
+  on(handler) {
+    for (const method of this.methods) {
+      this.handlers[method].push(handler)
+    }
+    return this
+  }
+
+  _addHandler(method, handler) {
+    this.handlers[method].push(handler)
+    return this
+  }
+
   async _requestHandler(req, res) {
     try {
       for (const handler of this.handlers[req.method]) {
@@ -55,11 +64,8 @@ export default class HttpServer {
       }
     } catch (error) {
       console.error(error)
+    } finally {
+      res.end()
     }
-  }
-
-  _addHandler(method, handler) {
-    this.handlers[method].push(handler)
-    return this
   }
 }

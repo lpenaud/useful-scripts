@@ -21,3 +21,32 @@ export function toCamelCase(str, regExp = /_|\-/g) {
     + str.substr(start, 1).toUpperCase()
     + str.substring(start + 1).toLowerCase()
 }
+
+export function computeIfAbsentMap(map, key, mappingFunction) {
+  let value = map.get(key)
+  if (value === undefined) {
+    value = mappingFunction(key)
+    map.set(key, value)
+  }
+  return value
+}
+
+export function computeIfAbsentObject(obj, key, mappingFunction) {
+  let value = obj[key]
+  if (value === undefined) {
+    obj[key] = value = mappingFunction(key)
+  }
+  return value
+}
+
+export function defaultValues(defaults, values) {
+  if (values === undefined) {
+    return defaults
+  }
+  for (const key in defaults) {
+    if (values[key] === undefined) {
+      values[key] = defaults[key]
+    }
+  }
+  return values
+}
