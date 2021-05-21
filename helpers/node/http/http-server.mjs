@@ -1,17 +1,17 @@
 import * as http from 'http'
-import { toCamelCase, defaultValues } from "../util.mjs";
+import { toCamelCase } from "../util.mjs";
 
 export default class HttpServer {
   static NOT_ALLOWED_METHOD = (req, res) => {
     res.writeHead(501)
-    res.end()
   }
 
-  static listenOptions(options) {
-    return defaultValues({
+  static listenOptions(options = {}) {
+    return {
       host: '0.0.0.0',
       port: 3000,
-    }, options)
+      ...options,
+    }
   }
 
   handlers
@@ -35,10 +35,6 @@ export default class HttpServer {
     return new Promise((resolve, reject) => {
       this.server.prependOnceListener('error', reject)
       this.server.listen(HttpServer.listenOptions(options), () => {
-        console.log('Web server listening on http://%s:%d',
-          options.host,
-          options.port,
-        )
         this.server.removeListener('error', reject)
         resolve()
       })

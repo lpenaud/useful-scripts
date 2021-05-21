@@ -1,12 +1,13 @@
 import { fileURLToPath } from 'url'
-import http from 'http'
-import { createReadStream } from 'fs'
+import { createReadStream, constants as fsConstants } from 'fs'
 import fs from 'fs/promises'
 import { pipeline } from 'stream/promises'
 import path from 'path'
 import HttpServer from '../helpers/node/http/http-server.mjs'
-import HttpRange from "../helpers/node/http/http-range.mjs";
-import HttpLogger from "../helpers/node/http/http-logger.mjs";
+import HttpRange from '../helpers/node/http/http-range.mjs'
+import HttpLogger from '../helpers/node/http/http-logger.mjs'
+import HttpForm from '../helpers/node/http/http-form.mjs'
+import { moveFile } from '../helpers/node/util.mjs'
 
 const STAT_FILTER = st => st.isDirectory() || st.isFile()
 
@@ -44,9 +45,12 @@ class FileHandler {
   range
   pathname
 
-  prepare(req, res, info) {
+  constructor({ req, info }) {
     this.range = new HttpRange(info.stat, req)
     this.pathname = info.pathname
+  }
+
+  prepare(res) {
     if (this.range.size < 0 || this.range.end === 0) {
       res.writeHead(416)
       res.end()
@@ -72,8 +76,11 @@ class FileHandler {
 class DirectoryHandler {
   pathname
 
-  prepare(req, res, info) {
+  constructor({ info }) {
     this.pathname = info.pathname
+  }
+
+  prepare(res) {
     res.statusCode = 200
     res.setHeader('Content-Type', 'text/html')
   }
@@ -107,40 +114,25 @@ class DirectoryHandler {
   <h1>${title}</h1>
   <hr>
   <ul>${files.join('')}</ul>
+  <form action="" method="POST" enctype="multipart/form-data">
+    <label for="infile">Choose a file</label>
+    <input type="file" name="infile" onchange="event.target.parentElement.submit()" required multiple>
+  </form>
   <hr>
 </body>
-<h1>`, resolve)
+</html>`, resolve)
     })
   }
 }
 
 class NotFoundHandler {
-  prepare(req, res, info) {
+  prepare(res) {
     res.writeHead(404)
   }
 
   send(req, res) {
     return Promise.resolve()
   }
-}
-
-/**
- * 
- * @param {http.ClientRequest} req - HTTP client request.
- * @param {http.ServerResponse} res - HTTP server reponse.
- * @param {PrepareHeaderOptions} options - Provider of callbacks.
- * @param {options.onFile} [options.onFile=USELESS_FUNCTION] - By default do nothing.
- * @param {options.onDirectory} [options.onDirectory=USELESS_FUNCTION] - By default do nothing.
- */
-async function handlerFactory(req, res, options = {}) {
-  const pathname = path.join('.', decodeURIComponent(req.url))
-  const stat = await tryStat(pathname)
-  const handler = stat === null ? new NotFoundHandler()
-    : stat.isDirectory() ? new DirectoryHandler()
-    : stat.isFile() ? new FileHandler() 
-    : new NotFoundHandler()
-  handler.prepare(req, res, { pathname, stat })
-  return handler
 }
 
 function usage(printer, code) {
@@ -155,7 +147,7 @@ function usage(printer, code) {
 }
 
 function readArgs(args) {
-  const config = {}
+  const config = HttpServer.listenOptions()
   let hasError = false
   let arg
   while (args.length > 0) {
@@ -192,15 +184,61 @@ function readArgs(args) {
 }
 
 async function main(args) {
-  const handlerSymbol = Symbol()
-  const server = new HttpServer()
+  args = readArgs(args)
+  const infoSymbol = Symbol('info')
+  const server = new HttpServer({
+    methods: ['POST'],
+  })
   const logger = new HttpLogger()
+  const headHandler = (req, res) => {
+    const info = req[infoSymbol]
+    const args = { res, req, info }
+    const handler = info.stat === null ? new NotFoundHandler(args)
+      : info.stat.isDirectory() ? new DirectoryHandler(args)
+      : info.stat.isFile() ? new FileHandler(args) 
+      : new NotFoundHandler(args)
+    handler.prepare(res)
+    return handler
+  }
   server.on(async (req, res) => {
-    req[handlerSymbol] = await handlerFactory(req, res)
+    const pathname = path.join('.', decodeURIComponent(req.url))
+    req[infoSymbol] = {
+      pathname,
+      stat: await tryStat(pathname),
+    }
+  })
+  .head((req, res) => headHandler(req, res))
+  .get((req, res) => headHandler(req, res).send(req, res))
+  .post(async (req, res) => {
+    const { pathname, stat } = req[infoSymbol]
+    if (stat === null) {
+      res.statusCode = 404
+      return
+    }
+    const form = new HttpForm(req.headers['content-type'])
+    await pipeline(req, form)
+    let files = new Set(form.files.map(f => f.filename))
+    const existingFiles = (await fs.readdir(pathname)).filter(f => files.delete(f))
+    if (existingFiles.length > 0) {
+      res.errorCode = 418
+      await Promise.all(form.files.map(f => fs.rm(f.path, { force: true })))
+    } else {
+      files = form.files.map(f => ({ path: f.path, pathname: path.join(pathname, f.filename) }))
+      try {
+        await Promise.all(files.map(f => moveFile(f.path, f.pathname, true)))
+        logger.info(files => files.map(f => ['POST %s', f.pathname]), files)
+      } catch (error) {
+        res.statusCode = 500
+        logger.error(error)
+      } finally {
+        await Promise.all(files.map(f => fs.rm(f.path, { force: true })))
+      }
+    }
+    await new DirectoryHandler({ res, req, info: req[infoSymbol] }).send(req, res)
   })
   .on(logger.log)
-  .get((req, res) => req[handlerSymbol].send(req, res))
-  await server.listen(readArgs(args))
+  await server.listen(args)
+  console.log('Web server listening on http://%s:%d', args.host, args.port)
 }
 
 // Test if it's this file which is directly call

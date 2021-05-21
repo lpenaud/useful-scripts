@@ -1,28 +1,43 @@
 import { Console } from 'console'
+import { USELESS_FUNCTION } from '../util.mjs'
 
-const LOG_SYMBOL = Symbol()
+const INFO_METHOD = Symbol('INFO METHOD')
 
 export default class HttpLogger extends Console {
+  static LEVELS = Object.freeze(['log', 'info', 'error', 'warn', 'debug'])
+
+  static getOptions(options = {}) {
+    return {
+      stderr: process.stderr,
+      stdout: process.stdout,
+      levels: HttpLogger.LEVELS,
+      ...options,
+    }
+  }
+
   dateTimeFormat
 
   constructor(options) {
-    super({
-      stderr: process.stderr,
-      stdout: process.stdout,
-      ...options,
-    })
+    super(options = HttpLogger.getOptions(options))
     this.dateTimeFormat = new Intl.DateTimeFormat([], {
       dateStyle: 'short',
       timeStyle: 'short',
     })
-    this.log = this[LOG_SYMBOL].bind(this, 'log')
-    this.info = this[LOG_SYMBOL].bind(this, 'info')
-    this.error = this[LOG_SYMBOL].bind(this, 'error')
-    this.warn = this[LOG_SYMBOL].bind(this, 'warn')
+    const levels = new Set(options.levels)
+    HttpLogger.LEVELS.filter(l => !levels.delete(l))
+      .forEach(l => this[l] = USELESS_FUNCTION)
+  }
+  
+  info(func, ...args) {
+    this[INFO_METHOD]('info', func, args)
   }
 
-  [LOG_SYMBOL](method, req, res) {
-    super[method]('%s:%d [%s] "%s %s HTTP/%s" %d',
+  debug(func, ...args) {
+    this[INFO_METHOD]('debug', func, args)
+  }
+
+  log(req, res) {
+    super.log('%s:%d [%s] "%s %s HTTP/%s" %d',
       req.socket.remoteAddress,
       req.socket.remotePort,
       this.dateTimeFormat.format(new Date()),
@@ -31,5 +46,17 @@ export default class HttpLogger extends Console {
       req.httpVersion,
       res.statusCode,
     )
+  }
+
+  [INFO_METHOD](method, func, args) {
+    method = super[method]
+    if (typeof func === "function") {
+      const result = func.apply(undefined, args)
+      if (Array.isArray(result)) {
+        return result.forEach(r => method.apply(this, r))
+      }
+      return method(result)
+    }
+    method(func, ...args)
   }
 }

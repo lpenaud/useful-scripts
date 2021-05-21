@@ -1,3 +1,6 @@
+import * as fs from 'fs/promises'
+import { constants as fsConstants } from 'fs'
+
 /**
  * Function that serves no purpose except to be called.
  * Useful for optional callback.
@@ -39,14 +42,39 @@ export function computeIfAbsentObject(obj, key, mappingFunction) {
   return value
 }
 
-export function defaultValues(defaults, values) {
-  if (values === undefined) {
-    return defaults
+class SplitResult {
+  buf
+  start
+  end
+
+  constructor(buf, start, end) {
+    this.buf = buf
+    this.start = start
+    this.end = end
   }
-  for (const key in defaults) {
-    if (values[key] === undefined) {
-      values[key] = defaults[key]
-    }
+
+  toString(encoding) {
+    return this.buf.toString(encoding, this.start, this.end)
   }
-  return values
+}
+
+/**
+ * 
+ * @param {Buffer} buf
+ * @param {Uint8Array} sep
+ * @param {number} [start=0]
+ */
+export function* splitBuffer(buf, sep, start = 0) {
+  let end
+  while ((end = buf.indexOf(sep, start)) !== -1) {
+    yield new SplitResult(buf, start, end)
+    start = end + sep.length
+  }
+  yield new SplitResult(buf, start, end)
+}
+
+export async function moveFile(src, dest, overwrite = false) {
+  await fs.copyFile(src, dest, overwrite ? 
+    fsConstants.COPYFILE_EXCL : undefined)
+  await fs.rm(src)
 }
