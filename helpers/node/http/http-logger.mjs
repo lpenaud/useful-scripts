@@ -1,31 +1,39 @@
 import { Console } from 'console'
 import { USELESS_FUNCTION } from '../util.mjs'
+import Enum from '../enum.mjs'
+import { defaultValues } from '../util.mjs'
 
 const INFO_METHOD = Symbol('INFO METHOD')
+const LEVELS = new Enum('error', 'warn', 'log', 'info', 'debug')
 
 export default class HttpLogger extends Console {
-  static LEVELS = Object.freeze(['log', 'info', 'error', 'warn', 'debug'])
+  static get LEVELS() {
+    return LEVELS
+  }
 
-  static getOptions(options = {}) {
-    return {
-      stderr: process.stderr,
-      stdout: process.stdout,
-      levels: HttpLogger.LEVELS,
-      ...options,
-    }
+  static getOptions(options) {
+    return defaultValues([
+      { key: 'stderr', d: process.stderr },
+      { key: 'stdout', d: process.stdout },
+      { key: 'level', d: LEVELS.info },
+      {
+        key: 'dateTimeFormat',
+        d: {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        },
+      },
+    ], options)
   }
 
   dateTimeFormat
 
   constructor(options) {
     super(options = HttpLogger.getOptions(options))
-    this.dateTimeFormat = new Intl.DateTimeFormat([], {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    })
-    const levels = new Set(options.levels)
-    HttpLogger.LEVELS.filter(l => !levels.delete(l))
-      .forEach(l => this[l] = USELESS_FUNCTION)
+    this.dateTimeFormat = new Intl.DateTimeFormat([], options.dateTimeFormat)
+    for (let i = options.level + 1; i < LEVELS[Enum.SIZE]; i++) {
+      this[LEVELS[i]] = USELESS_FUNCTION
+    }
   }
   
   info(func, ...args) {

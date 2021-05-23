@@ -78,3 +78,25 @@ export async function moveFile(src, dest, overwrite = false) {
     fsConstants.COPYFILE_EXCL : undefined)
   await fs.rm(src)
 }
+
+export function isEmpty(object) {
+  for (const _ in object) {
+    return false
+  }
+  return true
+}
+
+export function defaultValues(keys, values = {}) {
+  if (isEmpty(values)) {
+    for (const { key, d } of keys) {
+      values[key] = d
+    }
+    return values
+  }
+  for (const { key, d } of keys) {
+    if (values[key] === undefined) {
+      values[key] = d
+    }
+  }
+  return values
+}

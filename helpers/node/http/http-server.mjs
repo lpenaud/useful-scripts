@@ -1,4 +1,5 @@
 import * as http from 'http'
+import { defaultValues } from '../util.mjs';
 import { toCamelCase } from "../util.mjs";
 
 export default class HttpServer {
@@ -6,12 +7,12 @@ export default class HttpServer {
     res.writeHead(501)
   }
 
-  static listenOptions(options = {}) {
-    return {
-      host: '0.0.0.0',
-      port: 3000,
-      ...options,
-    }
+  static listenOptions(options) {
+    return defaultValues([
+      { key: 'host', d: '0.0.0.0' },
+      { key: 'port', d: 3000 },
+      { key: 'method', d: [] },
+    ], options)
   }
 
   handlers
@@ -19,14 +20,18 @@ export default class HttpServer {
   methods
 
   constructor(options = {}) {
-    this.handlers = {}
-    this.methods = new Set(options.methods || [])
+    const methods = new Set(options.methods)
       .add('GET').add('HEAD')
-    http.METHODS.filter(m => !this.methods.has(m))
-      .forEach(m => this.handlers[m] = [HttpServer.NOT_ALLOWED_METHOD])
-    for (const method of this.methods) {
-      this[toCamelCase(method)] = this._addHandler.bind(this, method)
-      this.handlers[method] = []
+    this.handlers = {}
+    this.methods = []
+    for (const method of http.METHODS) {
+      if (methods.delete(method)) {
+        this[toCamelCase(method)] = this._addHandler.bind(this, method)
+        this.methods.push(method)
+        this.handlers[method] = []
+      } else {
+        this.handlers[method] = [HttpServer.NOT_ALLOWED_METHOD]
+      }
     }
     this.server = http.createServer(options.server, this._requestHandler.bind(this))
   }

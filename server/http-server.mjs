@@ -130,40 +130,58 @@ class NotFoundHandler {
     res.writeHead(404)
   }
 
-  send(req, res) {
+  send() {
     return Promise.resolve()
   }
 }
 
 function usage(printer, code) {
   const httpOptions = HttpServer.listenOptions()
+  const loggerOptions = HttpLogger.getOptions()
   const prgm = path.basename(process.argv[1])
-  const formatter = arg => printer('  %s %s', prgm, arg)
+  const formatter = arg => printer(`  ${prgm} ${arg}`)
   printer('Usage:')
   formatter(`[(-H --host) HOST=${httpOptions.host}]`)
   formatter(`[(-p --port) PORT=${httpOptions.port}]`)
+  formatter(`[(-l --level) LEVEL=${loggerOptions.level}]`)
   formatter('(-h --help)')
   process.exit(code)
 }
 
 function readArgs(args) {
-  const config = HttpServer.listenOptions()
+  const config = {
+    listen: {},
+    log: {},
+  }
   let hasError = false
   let arg
   while (args.length > 0) {
     switch (arg = args.shift()) {
       case '--port':
       case '-p':
-        config.port = parseInt(args.shift())
-        if (config.port === NaN || config.port < 0 || config.port >= 65536) {
+        const port = parseInt(args.shift())
+        if (port === NaN || port < 0 || port >= 65536) {
           console.error('PORT should be >= 0 and < 65536')
           hasError = true
+        } else {
+          config.listen.port = port
         }
         break
 
       case '--host':
       case '-H':
-        config.host = args.shift()
+        config.listen.host = args.shift()
+        break
+
+      case '-l':
+      case '--level':
+        const level = args.shift()
+        if (typeof HttpLogger.LEVELS[level] !== 'number') {
+          console.error('Undefined log level', level)
+          hasError = true
+        } else {
+          config.log.level = HttpLogger.LEVELS[level]
+        }
         break
 
       case '-h':
@@ -187,9 +205,9 @@ async function main(args) {
   args = readArgs(args)
   const infoSymbol = Symbol('info')
   const server = new HttpServer({
-    methods: ['POST'],
+    methods: ['POST', 'PUT'],
   })
-  const logger = new HttpLogger()
+  const logger = new HttpLogger(args.log)
   const headHandler = (req, res) => {
     const info = req[infoSymbol]
     const args = { res, req, info }
@@ -199,6 +217,22 @@ async function main(args) {
       : new NotFoundHandler(args)
     handler.prepare(res)
     return handler
+  }
+  const reveiveFile = async (res, req, form, pathname, method) => {
+    const files = form.files.map(f => ({ path: f.path, pathname: path.join(pathname, f.filename) }))
+    try {
+      await Promise.all(files.map(f => moveFile(f.path, f.pathname)))
+      logger.info(() => files.map(f => ['%s %s', method, f.pathname]))
+    } catch (error) {
+      res.statusCode = 500
+      logger.error(error)
+    } finally {
+      await Promise.all(files.map(f => fs.rm(f.path, { force: true })))
+    }
+    res.writeHead(303, {
+      'location': req.url,
+    })
+    res.end()
   }
   server.on(async (req, res) => {
     const pathname = path.join('.', decodeURIComponent(req.url))
@@ -217,28 +251,28 @@ async function main(args) {
     }
     const form = new HttpForm(req.headers['content-type'])
     await pipeline(req, form)
-    let files = new Set(form.files.map(f => f.filename))
+    const files = new Set(form.files.map(f => f.filename))
     const existingFiles = (await fs.readdir(pathname)).filter(f => files.delete(f))
     if (existingFiles.length > 0) {
-      res.errorCode = 418
+      res.statusCode = 418
       await Promise.all(form.files.map(f => fs.rm(f.path, { force: true })))
     } else {
-      files = form.files.map(f => ({ path: f.path, pathname: path.join(pathname, f.filename) }))
-      try {
-        await Promise.all(files.map(f => moveFile(f.path, f.pathname, true)))
-        logger.info(files => files.map(f => ['POST %s', f.pathname]), files)
-      } catch (error) {
-        res.statusCode = 500
-        logger.error(error)
-      } finally {
-        await Promise.all(files.map(f => fs.rm(f.path, { force: true })))
-      }
+      await reveiveFile(res, req, form, pathname, req.method)
     }
-    await new DirectoryHandler({ res, req, info: req[infoSymbol] }).send(req, res)
+  })
+  .put(async (req, res) => {
+    const { pathname, stat } = req[infoSymbol]
+    if (stat === null) {
+      res.statusCode = 404
+      return
+    }
+    const form = new HttpForm(req.headers['content-type'])
+    await pipeline(req, form)
+    await reveiveFile(res, req, form, pathname, req.method)
   })
   .on(logger.log)
-  await server.listen(args)
-  console.log('Web server listening on http://%s:%d', args.host, args.port)
+  await server.listen(args.listen)
+  console.log('Web server listening on http://%s:%d', args.listen.host, args.listen.port)
 }
 
 // Test if it's this file which is directly call
