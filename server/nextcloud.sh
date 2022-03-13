@@ -2,9 +2,10 @@
 # Backup nextcloud
 #
 
-DIRNAME="$(dirname ${0})"
-. "${DIRNAME}/../helpers/functions"
-import "params"
+source "$(dirname "${BASH_SOURCE}")/../helpers/base.sh"
+base::import "helpers/argsparse.sh"
+base::import "server/nextcloud.sh"
+base::import "helpers/functions"
 
 function usage () {
   print_usage "[-c CONFIG] [-o BACKUP] [-b OCC]"
@@ -21,8 +22,8 @@ function mysql_dump () {
   echo "user=${1}" >> "${cnf}"
   echo "password=${2}" >> "${cnf}"
   local cmd=("mysqldump" "--defaults-file=${cnf}" "--single-transaction" "${3}" ">" "${4}")
-  log_exec mysqldump --defaults-file="${cnf}" --single-transaction "${3}" ">" "${4}"
-  log_exec rm "'${cnf}'"
+  mysqldump --defaults-file="${cnf}" --single-transaction "${3}" ">" "${4}"
+  rm "'${cnf}'"
 }
 
 function db_dump () {
@@ -32,14 +33,14 @@ function db_dump () {
   local dbpassword="$(get_string dbpassword)"
   local dbname="$(get_string dbname)"
   local dbbackup="${BACKUP}/${dbtype}/$(date "+%d-%m-%Y").sql"
-  log_exec mkdir -p "$(dirname "${dbbackup}")"
+  mkdir -p "$(dirname "${dbbackup}")"
   mysql_dump "${dbuser}" "${dbpassword}" "${dbname}" "${dbbackup}"
 }
 
 function rsync_backup () {
   local src="$(get_string "${1}")"
   assert_not_null "${src}" "'${1}' cannot be null"
-  log_exec rsync -avx "${src}" "${BACKUP}/${2}"
+  rsync -avx "${src}" "${BACKUP}/${2}"
 }
 
 codes=()
@@ -76,12 +77,12 @@ while [ $# -ne 0 ]; do
   shift
 done
 
-CONFIG="$(parse_input_file "${CONFIG}")"
+CONFIG="$(argsparse::infile "${CONFIG}")"
 codes+=($?)
 if [ -z "${BACKUP}" ]; then
   codes+=(1)
 fi
-OCC="$(parse_input_file "${OCC}")"
+OCC="$(argsparse::infile "${OCC}")"
 codes+=($?)
 
 if has_error $codes; then
@@ -92,10 +93,9 @@ theme="$(get_string theme)"
 if [ -n "${theme}" ]; then
   assert_not_null "${THEME}"
 fi
-log_exec mkdir -p "${BACKUP}"
-log_exec sudo -u http php "${OCC}" maintenance:mode --on
+mkdir -p "${BACKUP}"
+sudo -u http php "${OCC}" maintenance:mode --on
 db_dump &
 rsync_backup datadirectory data &
 wait
-wait
-log_exec sudo -u http php "${OCC}" maintenance:mode --on
+sudo -u http php "${OCC}" maintenance:mode --on

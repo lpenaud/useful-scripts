@@ -2,19 +2,19 @@
 # Create 16x16 icon from an picture (jpg, png, WebP...).
 #
 
-DIRNAME="$(dirname ${0})"
-. "${DIRNAME}/../helpers/functions"
+source "$(dirname "${BASH_SOURCE}")/../helpers/base.sh"
+base::import "helpers/functions"
 
 if [ $# -eq 0 ] || [ $# -gt 2 ]; then
   print_usage "<infile>" "<infile> <outfile>"
   exit 1
 fi
 
-infile="$(parse_input_file "${1}")"
+infile="$(argparse::infile "${1}")"
 assert_code
 if [ $# -eq 2 ]; then
-  outfile="$(parse_output_file "${2}" ".ico" "${infile}")"
+  outfile="$(argparse::outfile "${2}" ".ico")"
 else
   outfile="$(get_filename "${infile}").ico"
 fi
-log_exec convert -resize 16x16 "${infile}" "${outfile}"
+convert -resize 16x16 "${infile}" "${outfile}"

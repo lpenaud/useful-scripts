@@ -224,63 +224,6 @@ function format_cmd () {
 }
 
 #######################################
-# Format and log a command line it and execute it if the debug mod is desactivate.
-# Globals:
-#   DEBUG
-# Arguments:
-#   ...args
-# Output:
-#   Write the formatted commande line to stderr.
-#######################################
-function log_exec () {
-  local cmd="$(format_cmd "$@")"
-  echo "${cmd}" >&2
-  if [ -z "${DEBUG}" ]; then
-    eval "${cmd}"
-  fi
-}
-
-#######################################
-# Parse an output file and create subdirectories if any.
-# Arguments:
-#   Output file
-#   Extention of output file (must have an dot of the start)
-#   Source file if any (in case where output file is a directory)
-# Output:
-#   Write the formatted path to stdout.
-#######################################
-function parse_output_file () {
-  local dirname="$(get_dirname "${1}")"
-  local basename="$(get_basename "${1}")"
-  local ext="${2}$"
-  if [[ ! "${basename}" =~ $ext ]]; then
-    dirname="${1}"
-    basename="$(get_basename "${3}")"
-  fi
-  log_exec mkdir -p "${dirname}"
-  echo "${dirname}/${basename}"
-}
-
-#######################################
-# Parse an input file, check if it's exist.
-# Arguments:
-#   Filename, path
-# Output:
-#   Write the formatted path to stdout.
-#   Write an error if the file is not valid to stderr.
-# Returns:
-#   0 if the file exists, otherwise 1.
-#######################################
-function parse_input_file () {
-  if [ -f "${1}" ]; then
-    echo "${1}"
-    return 0
-  fi
-  echo "Error: '${1}' is not a file" >&2
-  return 1
-}
-
-#######################################
 # Test given exit code.
 # Arguments:
 #   ...codes
@@ -323,6 +266,7 @@ function is_flag () {
 #   1 if the file doesn't exit.
 #######################################
 function import () {
+  echo "Deprecated use basse::import instead" >&2
   local file="${DIRNAME}/${1}"
   if [ ! -f "${file}" ]; then
     echo "Error: Cannot import '${file}'" >&2
