@@ -13,8 +13,11 @@
 	prompt = false
 [alias]
 	ci = commit
-	lg = log --oneline --graph --decorate
-	rbase = rebase --interactive
+	lg = log --graph --pretty='tformat:%C(yellow)%h%Creset - %C(green)%cn%Creset - %C(blue)%as%Creset%C(auto)%d%Creset%n%>>(8)%B'
 	st = status
 	unstage = reset HEAD
-	reset-file = checkout --
+	pullr = pull --rebase
+	pushf = push --force
+	ri = rebase --interactive
+	rc = rebase --continue
+	ra = rebase --abort
