@@ -13,7 +13,7 @@
 	prompt = false
 [alias]
 	ci = commit
-	lg = log --graph --pretty='tformat:%C(yellow)%h%Creset - %C(green)%cn%Creset - %C(blue)%as%Creset%C(auto)%d%Creset%n%>>(8)%B'
+	lg = log --graph --pretty='tformat:%C(yellow)%h%Creset - %C(green)%an%Creset - %C(blue)%as%Creset%C(auto)%d%Creset%n%>>(8)%B'
 	st = status
 	unstage = reset HEAD
 	pullr = pull --rebase
