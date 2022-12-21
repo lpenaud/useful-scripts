@@ -1,4 +1,21 @@
-function parseArg(args) {
+/**
+ * Parse cli arguement as a plain object.
+ * @example
+ * // return { help: false, arg: value1, a: value2 }
+ * parseArgs(["--arg", "value1", "-a", "value2"]);
+ * @example
+ * // return { help: false, arg: ["value1", "value2"] }
+ * parseArgs(["--arg", "value1", "--arg", "value2"])
+ * @example
+ * // return { help: true, _: ["p1", "p2"] }
+ * parseArgs(["--help", "p1", "p2"])
+ * @example
+ * // return { help: true, _: "p1", }
+ * parseArgs(["--help", "p1"])
+ * @param {string[]} args Arguments from cli
+ * @returns {{[key: string]: string}} Parsed arguements as plain object.
+ */
+function parseArgs(args) {
   const positional = "_";
   const options = {};
   const regExp = /^--?([a-z]+)$/i;
