@@ -59,3 +59,7 @@ function parseArgs(args) {
 
 // node !module.parent
 // main(process.argv.slice(2))
+
+// node ESM
+// import { fileURLToPath } from 'node:url'
+// fileURLToPath(import.meta.url) === process.argv[1]
