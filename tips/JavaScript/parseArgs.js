@@ -44,6 +44,9 @@ function parseArgs(args) {
     }
     arg = args.shift();
   }
+  if (key !== positional) {
+    options[key] = true;
+  }
   return {
     ...options,
     // Convert undefined value to boolean
