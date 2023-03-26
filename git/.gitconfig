@@ -13,6 +13,7 @@
 	prompt = false
 [alias]
 	ci = commit
+	cia = commit --amend
 	lg = log --graph --pretty='tformat:%C(yellow)%h%Creset - %C(green)%an%Creset - %C(blue)%as%Creset%C(auto)%d%Creset%n%>>(8)%B'
 	st = status
 	unstage = reset HEAD
